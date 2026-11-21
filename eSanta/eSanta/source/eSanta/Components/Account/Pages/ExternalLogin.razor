@@ -16,17 +16,16 @@
 @inject IdentityRedirectManager RedirectManager
 @inject ILogger<ExternalLogin> Logger
 
-<PageTitle>Register</PageTitle>
+<PageTitle>Rejestracja</PageTitle>
 
 <StatusMessage Message="@message" />
-<h1>Register</h1>
-<h2>Associate your @ProviderDisplayName account.</h2>
+<h1>Rejestracja</h1>
+<h2>Powiąż swoje konto @ProviderDisplayName.</h2>
 <hr />
 
 <div  class="alert alert-info">
-    You've successfully authenticated with <strong>@ProviderDisplayName</strong>.
-    Please enter an email address for this site below and click the Register button to finish
-    logging in.
+    Uwierzytelnianie przez <strong>@ProviderDisplayName</strong> powiodło się.
+    Podaj poniżej adres e-mail dla tej witryny i kliknij „Zarejestruj się”, aby dokończyć logowanie.
 </div>
 
 <div class="row">
@@ -35,11 +34,11 @@
             <DataAnnotationsValidator />
             <ValidationSummary class="text-danger" role="alert" />
             <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="email" placeholder="Please enter your email." />
-                <label for="Input.Email" class="form-label">Email</label>
+                <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="email" placeholder="Podaj adres e-mail." />
+                <label for="Input.Email" class="form-label">E-mail</label>
                 <ValidationMessage For="() => Input.Email" />
             </div>
-            <button type="submit" class="w-100 btn btn-lg btn-primary">Register</button>
+            <button type="submit" class="w-100 btn btn-lg btn-primary">Zarejestruj się</button>
         </EditForm>
     </div>
 </div>
@@ -73,14 +72,14 @@
 
         if (RemoteError is not null)
         {
-            RedirectManager.RedirectToWithStatus("Account/Login", $"Error from external provider: {RemoteError}", HttpContext);
+            RedirectManager.RedirectToWithStatus("Account/Login", $"Błąd zewnętrznego dostawcy logowania: {RemoteError}", HttpContext);
             return;
         }
 
         var info = await SignInManager.GetExternalLoginInfoAsync();
         if (info is null)
         {
-            RedirectManager.RedirectToWithStatus("Account/Login", "Error loading external login information.", HttpContext);
+            RedirectManager.RedirectToWithStatus("Account/Login", "Błąd: nie udało się wczytać danych logowania zewnętrznego.", HttpContext);
             return;
         }
 
@@ -104,7 +103,7 @@
     {
         if (externalLoginInfo is null)
         {
-            RedirectManager.RedirectToWithStatus("Account/Login", "Error loading external login information.", HttpContext);
+            RedirectManager.RedirectToWithStatus("Account/Login", "Błąd: nie udało się wczytać danych logowania zewnętrznego.", HttpContext);
             return;
         }
 
@@ -141,7 +140,7 @@
     {
         if (externalLoginInfo is null)
         {
-            RedirectManager.RedirectToWithStatus("Account/Login", "Error loading external login information during confirmation.", HttpContext);
+            RedirectManager.RedirectToWithStatus("Account/Login", "Błąd: nie udało się wczytać danych logowania zewnętrznego podczas potwierdzania.", HttpContext);
             return;
         }
 
@@ -182,7 +181,7 @@
         }
         else
         {
-            message = $"Error: {string.Join(",", result.Errors.Select(error => error.Description))}";
+            message = $"Błąd: {string.Join(" ", result.Errors.Select(error => error.Description))}";
         }
     }
 
@@ -210,8 +209,9 @@
 
     private sealed class InputModel
     {
-        [Required]
-        [EmailAddress]
+        [Required(ErrorMessage = "Pole {0} jest wymagane.")]
+        [EmailAddress(ErrorMessage = "Pole {0} musi zawierać poprawny adres e-mail.")]
+        [Display(Name = "E-mail")]
         public string Email { get; set; } = "";
     }
 }

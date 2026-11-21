@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\lenar\\source\\repos\\santa\\eSanta\\eSanta\\source\\eSanta\\eSanta.csproj": {}
+    "C:\\Users\\lenar\\source\\repos\\eSantaProject\\eSanta\\eSanta\\source\\eSanta\\eSanta.csproj": {}
   },
   "projects": {
-    "C:\\Users\\lenar\\source\\repos\\santa\\eSanta\\eSanta\\source\\eSanta\\eSanta.csproj": {
+    "C:\\Users\\lenar\\source\\repos\\eSantaProject\\eSanta\\eSanta\\source\\eSanta\\eSanta.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\lenar\\source\\repos\\santa\\eSanta\\eSanta\\source\\eSanta\\eSanta.csproj",
+        "projectUniqueName": "C:\\Users\\lenar\\source\\repos\\eSantaProject\\eSanta\\eSanta\\source\\eSanta\\eSanta.csproj",
         "projectName": "eSanta",
-        "projectPath": "C:\\Users\\lenar\\source\\repos\\santa\\eSanta\\eSanta\\source\\eSanta\\eSanta.csproj",
+        "projectPath": "C:\\Users\\lenar\\source\\repos\\eSantaProject\\eSanta\\eSanta\\source\\eSanta\\eSanta.csproj",
         "packagesPath": "C:\\Users\\lenar\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\lenar\\source\\repos\\santa\\eSanta\\eSanta\\source\\eSanta\\obj\\",
+        "outputPath": "C:\\Users\\lenar\\source\\repos\\eSantaProject\\eSanta\\eSanta\\source\\eSanta\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -71,13 +71,17 @@
               "target": "Package",
               "version": "[10.0.15, )"
             },
-            "Microsoft.EntityFrameworkCore.SqlServer": {
-              "target": "Package",
-              "version": "[10.0.15, )"
-            },
             "Microsoft.EntityFrameworkCore.Tools": {
               "target": "Package",
               "version": "[10.0.15, )"
+            },
+            "MudBlazor": {
+              "target": "Package",
+              "version": "[9.14.0, )"
+            },
+            "Npgsql.EntityFrameworkCore.PostgreSQL": {
+              "target": "Package",
+              "version": "[10.0.4, )"
             }
           },
           "imports": [

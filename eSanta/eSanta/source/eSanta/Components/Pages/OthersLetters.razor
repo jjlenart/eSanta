@@ -1,0 +1,85 @@
+@page "/others-letters"
+
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
+@using eSanta.Features.FamilyWishlists
+
+@attribute [Authorize]
+
+@inject IFamilyWishlistService FamilyWishlistService
+
+<PageTitle>Listy innych osób</PageTitle>
+
+<MudText Typo="Typo.h4" HtmlTag="h1" Class="mb-2">Listy innych osób</MudText>
+
+@if (_error is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+}
+else if (_result is null)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+}
+else if (!_result.HasFamily)
+{
+    <MudAlert Severity="Severity.Info">Twoje konto nie jest przypisane do żadnej rodziny, więc nie widzisz listów innych osób.</MudAlert>
+}
+else
+{
+    <MudText Typo="Typo.subtitle1" Class="mb-4">Rodzina: <strong>@_result.FamilyName</strong>. Wybierz osobę, aby zobaczyć jej list do św. Mikołaja.</MudText>
+
+    @if (_result.Members.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info">Nikt inny z Twojej rodziny jeszcze się nie zarejestrował.</MudAlert>
+    }
+    else
+    {
+        <MudGrid Spacing="3">
+            @foreach (var member in _result.Members)
+            {
+                <MudItem xs="12" sm="6" md="4">
+                    <MudPaper Elevation="1" Class="pa-0">
+                        <MudLink Href="@($"others-letters/{Uri.EscapeDataString(member.Id)}")"
+                                 Underline="Underline.None"
+                                 Class="d-flex align-center gap-3 pa-4">
+                            <MudAvatar Color="Color.Secondary">@GetInitial(member.Alias)</MudAvatar>
+                            <MudText Typo="Typo.h6" Color="Color.Primary">@member.Alias</MudText>
+                            <MudSpacer />
+                            <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Color="Color.Default" />
+                        </MudLink>
+                    </MudPaper>
+                </MudItem>
+            }
+        </MudGrid>
+    }
+}
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    private FamilyMembersResult? _result;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var userId = (await AuthenticationState).User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId is null)
+        {
+            _error = "Nie udało się ustalić zalogowanego użytkownika. Zaloguj się ponownie.";
+            return;
+        }
+
+        try
+        {
+            _result = await FamilyWishlistService.GetFamilyMembersAsync(userId);
+        }
+        catch (Exception)
+        {
+            _error = "Nie udało się wczytać listy osób. Odśwież stronę.";
+        }
+    }
+
+    private static string GetInitial(string alias) =>
+        string.IsNullOrWhiteSpace(alias) ? "?" : alias.Trim()[..1].ToUpperInvariant();
+}

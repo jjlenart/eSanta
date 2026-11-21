@@ -1,0 +1,83 @@
+@using eSanta.Common
+@using eSanta.Data
+@using eSanta.Features.Attendance
+
+<EditForm Model="Model" OnValidSubmit="SubmitAsync">
+    <DataAnnotationsValidator />
+
+    <MudDialog>
+        <DialogContent>
+            @if (_error is not null)
+            {
+                <MudAlert Severity="Severity.Error" Class="mb-3">@_error</MudAlert>
+            }
+
+            <MudStack Spacing="1">
+                <MudTextField @bind-Value="Model.FullName"
+                              For="@(() => Model.FullName)"
+                              Label="Imię i nazwisko"
+                              Variant="Variant.Outlined"
+                              MaxLength="Attendee.FullNameMaxLength"
+                              Immediate="true"
+                              AutoFocus="true" />
+                <MudCheckBox @bind-Value="Model.IsPresentAtChristmasEve"
+                             Label="Obecny na Wigilii"
+                             Color="Color.Primary" />
+                <MudCheckBox @bind-Value="Model.ParticipatesInGiftExchange"
+                             Label="Bierze udział w wymianie prezentów"
+                             Color="Color.Primary" />
+            </MudStack>
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="Cancel" Disabled="_isSaving">Anuluj</MudButton>
+            <MudButton ButtonType="ButtonType.Submit"
+                       Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       Disabled="_isSaving">
+                Zapisz
+            </MudButton>
+        </DialogActions>
+    </MudDialog>
+</EditForm>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public AttendeeFormModel Model { get; set; } = new();
+
+    [Parameter, EditorRequired]
+    public Func<AttendeeFormModel, Task<ServiceResult>> OnSave { get; set; } = default!;
+
+    private string? _error;
+    private bool _isSaving;
+
+    private async Task SubmitAsync()
+    {
+        _isSaving = true;
+        _error = null;
+
+        try
+        {
+            var result = await OnSave(Model);
+            if (result.Succeeded)
+            {
+                MudDialog.Close(DialogResult.Ok(true));
+                return;
+            }
+
+            _error = result.Error;
+        }
+        catch (Exception)
+        {
+            _error = "Nie udało się zapisać zmian. Spróbuj ponownie.";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

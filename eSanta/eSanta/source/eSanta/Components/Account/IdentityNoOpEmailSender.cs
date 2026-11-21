@@ -10,12 +10,12 @@ namespace eSanta.Components.Account
         private readonly IEmailSender emailSender = new NoOpEmailSender();
 
         public Task SendConfirmationLinkAsync(ApplicationUser user, string email, string confirmationLink) =>
-            emailSender.SendEmailAsync(email, "Confirm your email", $"Please confirm your account by <a href='{confirmationLink}'>clicking here</a>.");
+            emailSender.SendEmailAsync(email, "Potwierdź adres e-mail", $"Potwierdź swoje konto, <a href='{confirmationLink}'>klikając tutaj</a>.");
 
         public Task SendPasswordResetLinkAsync(ApplicationUser user, string email, string resetLink) =>
-            emailSender.SendEmailAsync(email, "Reset your password", $"Please reset your password by <a href='{resetLink}'>clicking here</a>.");
+            emailSender.SendEmailAsync(email, "Zresetuj hasło", $"Zresetuj hasło, <a href='{resetLink}'>klikając tutaj</a>.");
 
         public Task SendPasswordResetCodeAsync(ApplicationUser user, string email, string resetCode) =>
-            emailSender.SendEmailAsync(email, "Reset your password", $"Please reset your password using the following code: {resetCode}");
+            emailSender.SendEmailAsync(email, "Zresetuj hasło", $"Zresetuj hasło, używając tego kodu: {resetCode}");
     }
 }

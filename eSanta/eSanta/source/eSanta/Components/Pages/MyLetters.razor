@@ -1,0 +1,196 @@
+@page "/my-letter"
+
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
+@using eSanta.Common
+@using eSanta.Components.Wishlist
+@using eSanta.Features.Wishlist
+
+@attribute [Authorize]
+
+@inject IWishlistService WishlistService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Mój list do św. Mikołaja</PageTitle>
+
+<MudStack Row="true"
+          Justify="Justify.SpaceBetween"
+          AlignItems="AlignItems.Center"
+          Wrap="Wrap.Wrap"
+          Class="mb-4">
+    <MudText Typo="Typo.h4" HtmlTag="h1">Mój list do św. Mikołaja</MudText>
+    <MudButton Variant="Variant.Filled"
+               Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.CardGiftcard"
+               OnClick="OpenAddDialogAsync"
+               Disabled="_ownerId is null">
+        Dodaj prezent
+    </MudButton>
+</MudStack>
+
+@if (_loadError is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_loadError</MudAlert>
+}
+
+@if (_items is null && _loadError is null)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+}
+else if (_items is not null)
+{
+    <MudTable Items="_items"
+              Hover="true"
+              Breakpoint="Breakpoint.Sm"
+              Elevation="1">
+        <HeaderContent>
+            <MudTh>Nazwa</MudTh>
+            <MudTh>Opis</MudTh>
+            <MudTh>Link</MudTh>
+            <MudTh Style="text-align:right">Akcje</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Nazwa"><strong>@context.Name</strong></MudTd>
+            <MudTd DataLabel="Opis" Style="white-space:pre-line">@context.Description</MudTd>
+            <MudTd DataLabel="Link">
+                @if (context.Link is not null)
+                {
+                    <MudLink Href="@context.Link" Target="_blank" rel="noopener noreferrer" Color="Color.Secondary">
+                        <MudIcon Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" Class="mr-1" Style="vertical-align:middle" />Otwórz
+                    </MudLink>
+                }
+                else
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">—</MudText>
+                }
+            </MudTd>
+            <MudTd DataLabel="Akcje" Style="text-align:right; white-space:nowrap">
+                <MudTooltip Text="Edytuj">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                   aria-label="@($"Edytuj {context.Name}")"
+                                   OnClick="@(() => OpenEditDialogAsync(context))" />
+                </MudTooltip>
+                <MudTooltip Text="Usuń">
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                   Color="Color.Error"
+                                   aria-label="@($"Usuń {context.Name}")"
+                                   OnClick="@(() => DeleteAsync(context))" />
+                </MudTooltip>
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText>Twój list jest jeszcze pusty. Dodaj pierwszy prezent, o którym marzysz.</MudText>
+        </NoRecordsContent>
+    </MudTable>
+}
+
+@code {
+    private static readonly DialogOptions FormDialogOptions = new()
+    {
+        MaxWidth = MaxWidth.Small,
+        FullWidth = true,
+        CloseOnEscapeKey = true
+    };
+
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    private string? _ownerId;
+    private IReadOnlyList<WishlistItemDto>? _items;
+    private string? _loadError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authenticationState = await AuthenticationState;
+        _ownerId = authenticationState.User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (_ownerId is null)
+        {
+            _loadError = "Nie udało się ustalić zalogowanego użytkownika. Zaloguj się ponownie.";
+            return;
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            _items = await WishlistService.GetItemsAsync(_ownerId!);
+            _loadError = null;
+        }
+        catch (Exception)
+        {
+            _loadError = "Nie udało się wczytać listu. Odśwież stronę.";
+        }
+    }
+
+    private async Task OpenAddDialogAsync()
+    {
+        var parameters = new DialogParameters<WishlistItemDialog>
+        {
+            { dialog => dialog.Model, new WishlistItemFormModel() },
+            { dialog => dialog.OnSave, model => WishlistService.AddAsync(_ownerId!, model) }
+        };
+
+        await ShowFormDialogAsync("Dodaj prezent", parameters, "Dodano prezent do listu.");
+    }
+
+    private async Task OpenEditDialogAsync(WishlistItemDto item)
+    {
+        var parameters = new DialogParameters<WishlistItemDialog>
+        {
+            { dialog => dialog.Model, WishlistItemFormModel.FromDto(item) },
+            { dialog => dialog.OnSave, model => WishlistService.UpdateAsync(_ownerId!, item.Id, model) }
+        };
+
+        await ShowFormDialogAsync("Edytuj prezent", parameters, "Zapisano zmiany.");
+    }
+
+    private async Task ShowFormDialogAsync(string title, DialogParameters<WishlistItemDialog> parameters, string successMessage)
+    {
+        var dialog = await DialogService.ShowAsync<WishlistItemDialog>(title, parameters, FormDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add(successMessage, Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private async Task DeleteAsync(WishlistItemDto item)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Usuń prezent",
+            $"Czy na pewno chcesz usunąć „{item.Name}” z listu?",
+            yesText: "Usuń",
+            cancelText: "Anuluj");
+
+        if (confirmed != true)
+        {
+            return;
+        }
+
+        try
+        {
+            var result = await WishlistService.DeleteAsync(_ownerId!, item.Id);
+            if (result.Succeeded)
+            {
+                Snackbar.Add("Usunięto prezent z listu.", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add(result.Error ?? "Nie udało się usunąć prezentu.", Severity.Error);
+            }
+        }
+        catch (Exception)
+        {
+            Snackbar.Add("Nie udało się usunąć prezentu. Spróbuj ponownie.", Severity.Error);
+        }
+
+        await LoadAsync();
+    }
+}

@@ -1,9 +1,16 @@
 using eSanta.Components;
 using eSanta.Components.Account;
 using eSanta.Data;
+using eSanta.Features.Account;
+using eSanta.Features.Attendance;
+using eSanta.Features.FamilyWishlists;
+using eSanta.Features.Registration;
+using eSanta.Features.ShoppingList;
+using eSanta.Features.Wishlist;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using MudBlazor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,16 +30,29 @@ builder.Services.AddAuthentication(options =>
     .AddIdentityCookies();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(connectionString));
+builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
+    options.UseNpgsql(connectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+builder.Services.AddMudServices();
+builder.Services.AddScoped<IAttendeeService, AttendeeService>();
+builder.Services.AddScoped<IRegistrationService, RegistrationService>();
+builder.Services.AddScoped<IAliasService, AliasService>();
+builder.Services.AddScoped<IWishlistService, WishlistService>();
+builder.Services.AddScoped<IFamilyWishlistService, FamilyWishlistService>();
+builder.Services.AddScoped<IShoppingListService, ShoppingListService>();
 
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
     {
-        options.SignIn.RequireConfirmedAccount = true;
+        // Users register with a first name instead of an email, so there is nothing to confirm.
+        options.SignIn.RequireConfirmedAccount = false;
+        // First names may contain Polish letters and spaces.
+        options.User.AllowedUserNameCharacters = string.Empty;
         options.Stores.SchemaVersion = IdentitySchemaVersions.Version3;
     })
     .AddEntityFrameworkStores<ApplicationDbContext>()
+    .AddErrorDescriber<PolishIdentityErrorDescriber>()
+    .AddClaimsPrincipalFactory<AliasClaimsPrincipalFactory>()
     .AddSignInManager()
     .AddDefaultTokenProviders();
 

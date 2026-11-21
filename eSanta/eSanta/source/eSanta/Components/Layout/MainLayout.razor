@@ -1,23 +1,90 @@
 ﻿@inherits LayoutComponentBase
 
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
+<MudThemeProvider Theme="_theme" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
 
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
-        </div>
-
-        <article class="content px-4">
-            @Body
-        </article>
-    </main>
+<div class="snowfall" aria-hidden="true">
+    @foreach (var style in _snowflakeStyles)
+    {
+        <span class="snowflake" style="@style">❄</span>
+    }
 </div>
+
+<MudLayout>
+    <MudAppBar Elevation="2" Class="festive-appbar">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu"
+                       Color="Color.Inherit"
+                       Edge="Edge.Start"
+                       aria-label="Przełącz menu"
+                       OnClick="ToggleDrawer" />
+        <MudLink Href="" Color="Color.Inherit" Underline="Underline.None" Class="ml-2 festive-brand">
+            <MudIcon Icon="@Icons.Material.Filled.Park" Class="festive-brand-icon" />
+            <span class="festive-title">Aplikacja wigilijna</span>
+        </MudLink>
+        <MudSpacer />
+        <AuthorizeView>
+            <NotAuthorized>
+                <MudButton Href="Account/Login" Color="Color.Inherit" Variant="Variant.Text">Zaloguj się</MudButton>
+                <MudButton Href="Account/Register" Color="Color.Inherit" Variant="Variant.Outlined" Class="ml-2">Zarejestruj się</MudButton>
+            </NotAuthorized>
+        </AuthorizeView>
+    </MudAppBar>
+
+    <MudDrawer @bind-Open="_drawerOpen"
+               Variant="DrawerVariant.Responsive"
+               ClipMode="DrawerClipMode.Always"
+               Elevation="2">
+        <NavMenu />
+    </MudDrawer>
+
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.Large" Class="py-6 festive-content">
+            @Body
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
 
 <div id="blazor-error-ui" data-nosnippet>
-    An unhandled error has occurred.
-    <a href="." class="reload">Reload</a>
+    Wystąpił nieoczekiwany błąd.
+    <a href="." class="reload">Odśwież</a>
     <span class="dismiss">🗙</span>
 </div>
+
+@code {
+    private const int SnowflakeCount = 18;
+
+    private static readonly MudTheme _theme = new()
+    {
+        PaletteLight = new PaletteLight
+        {
+            Primary = "#B71C1C",
+            PrimaryContrastText = "#FFFFFF",
+            Secondary = "#1B5E20",
+            SecondaryContrastText = "#FFFFFF",
+            Tertiary = "#C9A227",
+            TertiaryContrastText = "#3E2723",
+            Error = "#D32F2F",
+            Background = "#FBF6EE",
+            Surface = "#FFFFFF",
+            AppbarBackground = "#8E1616",
+            AppbarText = "#FFF8E7",
+            DrawerBackground = "#FFFCF6",
+            DrawerText = "#3E2723",
+            DrawerIcon = "#1B5E20",
+            TextPrimary = "#3E2723",
+            TableHover = "#FDF1E3",
+            Divider = "#E8DCCB"
+        }
+    };
+
+    private static readonly string[] _snowflakeStyles = Enumerable.Range(0, SnowflakeCount)
+        .Select(index => FormattableString.Invariant(
+            $"--left:{index * 37 % 100}%;--size:{0.6 + index % 4 * 0.3:0.0}rem;--duration:{9 + index % 5 * 3}s;--delay:{-(index * 1.7):0.0}s;--drift:{(index % 2 == 0 ? 30 : -30)}px"))
+        .ToArray();
+
+    private bool _drawerOpen = true;
+
+    private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
+}

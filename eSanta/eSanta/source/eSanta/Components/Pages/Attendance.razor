@@ -1,0 +1,282 @@
+@page "/"
+@page "/attendance"
+
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
+@using eSanta.Common
+@using eSanta.Components.Attendance
+@using eSanta.Features.Attendance
+
+@attribute [Authorize]
+
+@inject IAttendeeService AttendeeService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Lista obecności</PageTitle>
+
+<MudStack Row="true"
+          Justify="Justify.SpaceBetween"
+          AlignItems="AlignItems.Center"
+          Wrap="Wrap.Wrap"
+          Class="mb-4">
+    <MudText Typo="Typo.h4" HtmlTag="h1">Lista obecności</MudText>
+    <MudButton Variant="Variant.Filled"
+               Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.PersonAdd"
+               OnClick="OpenAddDialogAsync">
+        Dodaj osobę
+    </MudButton>
+</MudStack>
+
+@if (_loadError is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_loadError</MudAlert>
+}
+
+@if (_myStatus is not null)
+{
+    <MudPaper Elevation="1" Class="pa-4 mb-4" Style="border-left: 4px solid var(--mud-palette-secondary)">
+        <MudText Typo="Typo.h6" HtmlTag="h2" Class="mb-1">Twoja obecność</MudText>
+        <MudText Typo="Typo.body2" Class="mb-2">Zaznacz, czy będziesz na Wigilii i czy bierzesz udział w wymianie prezentów. Inni zobaczą to na liście poniżej.</MudText>
+        <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="4">
+            <MudCheckBox T="bool"
+                         Value="_myStatus.IsPresentAtChristmasEve"
+                         ValueChanged="@(value => SetMyStatusAsync(_myStatus with { IsPresentAtChristmasEve = value }))"
+                         Disabled="_isSavingMyStatus"
+                         Label="Będę na Wigilii"
+                         Color="Color.Primary" />
+            <MudCheckBox T="bool"
+                         Value="_myStatus.ParticipatesInGiftExchange"
+                         ValueChanged="@(value => SetMyStatusAsync(_myStatus with { ParticipatesInGiftExchange = value }))"
+                         Disabled="_isSavingMyStatus"
+                         Label="Biorę udział w wymianie prezentów"
+                         Color="Color.Primary" />
+        </MudStack>
+    </MudPaper>
+}
+
+@if (_attendees is null && _loadError is null)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+}
+else if (_attendees is not null)
+{
+    <MudTable Items="_attendees"
+              Hover="true"
+              Breakpoint="Breakpoint.Sm"
+              Elevation="1">
+        <HeaderContent>
+            <MudTh>Imię i nazwisko</MudTh>
+            <MudTh Style="text-align:center">Obecny na Wigilii</MudTh>
+            <MudTh Style="text-align:center">Wymiana prezentów</MudTh>
+            <MudTh Style="text-align:right">Akcje</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Imię i nazwisko">
+                @if (context.IsRegisteredUser)
+                {
+                    <MudTooltip Text="Zarejestrowany użytkownik — sam ustawia swoją obecność">
+                        <MudIcon Icon="@Icons.Material.Filled.AccountCircle" Size="Size.Small" Color="Color.Secondary" Class="mr-1" Style="vertical-align:middle" />
+                    </MudTooltip>
+                }
+                @context.FullName
+                @if (context.IsCurrentUser)
+                {
+                    <MudText Typo="Typo.body2" Inline="true" Color="Color.Secondary"> (Ty)</MudText>
+                }
+            </MudTd>
+            <MudTd DataLabel="Obecny na Wigilii" Style="text-align:center">
+                <MudCheckBox T="bool"
+                             Value="context.IsPresentAtChristmasEve"
+                             ValueChanged="@(value => SetPresenceAsync(context, value))"
+                             ReadOnly="!context.CanEdit"
+                             Color="Color.Primary"
+                             aria-label="@($"Obecny na Wigilii: {context.FullName}")" />
+            </MudTd>
+            <MudTd DataLabel="Wymiana prezentów" Style="text-align:center">
+                <MudCheckBox T="bool"
+                             Value="context.ParticipatesInGiftExchange"
+                             ValueChanged="@(value => SetGiftExchangeAsync(context, value))"
+                             ReadOnly="!context.CanEdit"
+                             Color="Color.Primary"
+                             aria-label="@($"Wymiana prezentów: {context.FullName}")" />
+            </MudTd>
+            <MudTd DataLabel="Akcje" Style="text-align:right">
+                @if (context.CanEdit)
+                {
+                    <MudTooltip Text="Edytuj">
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                       aria-label="@($"Edytuj {context.FullName}")"
+                                       OnClick="@(() => OpenEditDialogAsync(context))" />
+                    </MudTooltip>
+                    <MudTooltip Text="Usuń">
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                       Color="Color.Error"
+                                       aria-label="@($"Usuń {context.FullName}")"
+                                       OnClick="@(() => DeleteAsync(context))" />
+                    </MudTooltip>
+                }
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText>Lista jest pusta. Dodaj pierwszą osobę.</MudText>
+        </NoRecordsContent>
+    </MudTable>
+}
+
+@code {
+    private static readonly DialogOptions FormDialogOptions = new()
+    {
+        MaxWidth = MaxWidth.Small,
+        FullWidth = true,
+        CloseOnEscapeKey = true
+    };
+
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    private string? _currentUserId;
+    private IReadOnlyList<AttendeeDto>? _attendees;
+    private MyAttendanceDto? _myStatus;
+    private bool _isSavingMyStatus;
+    private string? _loadError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _currentUserId = (await AuthenticationState).User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (_currentUserId is null)
+        {
+            _loadError = "Nie udało się ustalić zalogowanego użytkownika. Zaloguj się ponownie.";
+            return;
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            _attendees = await AttendeeService.GetAllAsync(_currentUserId!);
+            _myStatus = await AttendeeService.GetMyStatusAsync(_currentUserId!);
+            _loadError = null;
+        }
+        catch (Exception)
+        {
+            _loadError = "Nie udało się wczytać listy obecności. Odśwież stronę.";
+        }
+    }
+
+    private async Task SetMyStatusAsync(MyAttendanceDto status)
+    {
+        _isSavingMyStatus = true;
+        _myStatus = status;
+
+        try
+        {
+            await ExecuteAsync(() => AttendeeService.SetMyStatusAsync(_currentUserId!, status), successMessage: null);
+        }
+        finally
+        {
+            _isSavingMyStatus = false;
+        }
+    }
+
+    private async Task OpenAddDialogAsync()
+    {
+        var parameters = new DialogParameters<AttendeeDialog>
+        {
+            { dialog => dialog.Model, new AttendeeFormModel() },
+            { dialog => dialog.OnSave, model => AttendeeService.AddAsync(model) }
+        };
+
+        await ShowFormDialogAsync("Dodaj osobę", parameters, "Dodano osobę do listy.");
+    }
+
+    private async Task OpenEditDialogAsync(AttendeeDto attendee)
+    {
+        var parameters = new DialogParameters<AttendeeDialog>
+        {
+            { dialog => dialog.Model, AttendeeFormModel.FromDto(attendee) },
+            { dialog => dialog.OnSave, model => AttendeeService.UpdateAsync(attendee.Id, model) }
+        };
+
+        await ShowFormDialogAsync("Edytuj osobę", parameters, "Zapisano zmiany.");
+    }
+
+    private async Task ShowFormDialogAsync(string title, DialogParameters<AttendeeDialog> parameters, string successMessage)
+    {
+        var dialog = await DialogService.ShowAsync<AttendeeDialog>(title, parameters, FormDialogOptions);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add(successMessage, Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private Task SetPresenceAsync(AttendeeDto attendee, bool isPresent)
+    {
+        var model = AttendeeFormModel.FromDto(attendee);
+        model.IsPresentAtChristmasEve = isPresent;
+
+        return SaveInlineAsync(attendee.Id, model);
+    }
+
+    private Task SetGiftExchangeAsync(AttendeeDto attendee, bool participates)
+    {
+        var model = AttendeeFormModel.FromDto(attendee);
+        model.ParticipatesInGiftExchange = participates;
+
+        return SaveInlineAsync(attendee.Id, model);
+    }
+
+    private async Task SaveInlineAsync(int id, AttendeeFormModel model)
+    {
+        await ExecuteAsync(() => AttendeeService.UpdateAsync(id, model), successMessage: null);
+    }
+
+    private async Task DeleteAsync(AttendeeDto attendee)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Usuń osobę",
+            $"Czy na pewno chcesz usunąć „{attendee.FullName}” z listy?",
+            yesText: "Usuń",
+            cancelText: "Anuluj");
+
+        if (confirmed != true)
+        {
+            return;
+        }
+
+        await ExecuteAsync(() => AttendeeService.DeleteAsync(attendee.Id), "Usunięto osobę z listy.");
+    }
+
+    private async Task ExecuteAsync(Func<Task<ServiceResult>> operation, string? successMessage)
+    {
+        try
+        {
+            var result = await operation();
+
+            if (result.Succeeded)
+            {
+                if (successMessage is not null)
+                {
+                    Snackbar.Add(successMessage, Severity.Success);
+                }
+            }
+            else
+            {
+                Snackbar.Add(result.Error ?? "Operacja nie powiodła się.", Severity.Error);
+            }
+        }
+        catch (Exception)
+        {
+            Snackbar.Add("Nie udało się zapisać zmian. Spróbuj ponownie.", Severity.Error);
+        }
+
+        await LoadAsync();
+    }
+}

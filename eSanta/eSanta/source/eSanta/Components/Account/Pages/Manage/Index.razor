@@ -1,47 +1,49 @@
 ﻿@page "/Account/Manage"
 
-@using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Identity
 @using eSanta.Data
+@using eSanta.Features.Account
 
 @inject UserManager<ApplicationUser> UserManager
 @inject SignInManager<ApplicationUser> SignInManager
+@inject IAliasService AliasService
 @inject IdentityRedirectManager RedirectManager
 
-<PageTitle>Profile</PageTitle>
+<PageTitle>Profil</PageTitle>
 
-<h3>Profile</h3>
-<StatusMessage />
+<h3>Profil</h3>
+<StatusMessage Message="@message" />
 
 <div class="row">
     <div class="col-xl-6">
-        <EditForm Model="Input" FormName="profile" OnValidSubmit="OnValidSubmitAsync" method="post">
+        <EditForm Model="Input" FormName="alias" OnValidSubmit="OnValidSubmitAsync" method="post">
             <DataAnnotationsValidator />
             <ValidationSummary class="text-danger" role="alert" />
             <div class="form-floating mb-3">
-                <input type="text" value="@username" id="username" class="form-control" placeholder="Choose your username." disabled />
-                <label for="username" class="form-label">Username</label>
+                <input type="text" value="@userName" id="userName" class="form-control" placeholder="Login" disabled />
+                <label for="userName" class="form-label">Login</label>
             </div>
-            <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.PhoneNumber" id="Input.PhoneNumber" class="form-control" placeholder="Enter your phone number" />
-                <label for="Input.PhoneNumber" class="form-label">Phone number</label>
-                <ValidationMessage For="() => Input.PhoneNumber" class="text-danger" />
+            <div class="form-floating mb-1">
+                <InputText @bind-Value="Input.Alias" id="Input.Alias" class="form-control" aria-required="true" aria-describedby="alias-help" placeholder="Alias" maxlength="@ApplicationUser.DisplayNameMaxLength" />
+                <label for="Input.Alias" class="form-label">Alias</label>
             </div>
-            <button type="submit" class="w-100 btn btn-lg btn-primary">Save</button>
+            <div id="alias-help" class="form-text mb-3">Pod tą nazwą widzą Cię inni użytkownicy aplikacji.</div>
+            <ValidationMessage For="() => Input.Alias" class="text-danger" />
+            <button type="submit" class="w-100 btn btn-lg btn-primary">Zapisz</button>
         </EditForm>
     </div>
 </div>
 
 @code {
+    private string? message;
     private ApplicationUser? user;
-    private string? username;
-    private string? phoneNumber;
+    private string? userName;
 
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
 
     [SupplyParameterFromForm]
-    private InputModel Input { get; set; } = default!;
+    private AliasModel Input { get; set; } = default!;
 
     protected override async Task OnInitializedAsync()
     {
@@ -54,10 +56,12 @@
             return;
         }
 
-        username = await UserManager.GetUserNameAsync(user);
-        phoneNumber = await UserManager.GetPhoneNumberAsync(user);
+        userName = user.UserName;
 
-        Input.PhoneNumber ??= phoneNumber;
+        if (HttpMethods.IsGet(HttpContext.Request.Method))
+        {
+            Input.Alias = user.Alias;
+        }
     }
 
     private async Task OnValidSubmitAsync()
@@ -68,24 +72,14 @@
             return;
         }
 
-        if (Input.PhoneNumber != phoneNumber)
+        var result = await AliasService.ChangeAliasAsync(user, Input);
+        if (!result.Succeeded)
         {
-            var setPhoneResult = await UserManager.SetPhoneNumberAsync(user, Input.PhoneNumber);
-            if (!setPhoneResult.Succeeded)
-            {
-                RedirectManager.RedirectToCurrentPageWithStatus("Error: Failed to set phone number.", HttpContext);
-                return;
-            }
+            message = $"Błąd: {result.Error}";
+            return;
         }
 
         await SignInManager.RefreshSignInAsync(user);
-        RedirectManager.RedirectToCurrentPageWithStatus("Your profile has been updated", HttpContext);
-    }
-
-    private sealed class InputModel
-    {
-        [Phone]
-        [Display(Name = "Phone number")]
-        public string? PhoneNumber { get; set; }
+        RedirectManager.RedirectToCurrentPageWithStatus("Alias został zmieniony.", HttpContext);
     }
 }

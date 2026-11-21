@@ -1,0 +1,94 @@
+@using eSanta.Common
+@using eSanta.Data
+@using eSanta.Features.Wishlist
+
+<EditForm Model="Model" OnValidSubmit="SubmitAsync">
+    <DataAnnotationsValidator />
+
+    <MudDialog>
+        <DialogContent>
+            @if (_error is not null)
+            {
+                <MudAlert Severity="Severity.Error" Class="mb-3">@_error</MudAlert>
+            }
+
+            <MudStack Spacing="2">
+                <MudTextField @bind-Value="Model.Name"
+                              For="@(() => Model.Name)"
+                              Label="Nazwa"
+                              Variant="Variant.Outlined"
+                              MaxLength="WishlistItem.NameMaxLength"
+                              Immediate="true"
+                              AutoFocus="true" />
+                <MudTextField @bind-Value="Model.Description"
+                              For="@(() => Model.Description)"
+                              Label="Opis"
+                              Variant="Variant.Outlined"
+                              MaxLength="WishlistItem.DescriptionMaxLength"
+                              Lines="4"
+                              Sizing="InputSizing.Auto"
+                              Immediate="true" />
+                <MudTextField @bind-Value="Model.Link"
+                              For="@(() => Model.Link)"
+                              Label="Link (opcjonalnie)"
+                              Placeholder="https://"
+                              HelperText="Np. strona sklepu, w którym można kupić prezent."
+                              InputType="InputType.Url"
+                              Variant="Variant.Outlined"
+                              MaxLength="WishlistItem.LinkMaxLength"
+                              Immediate="true" />
+            </MudStack>
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="Cancel" Disabled="_isSaving">Anuluj</MudButton>
+            <MudButton ButtonType="ButtonType.Submit"
+                       Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       Disabled="_isSaving">
+                Zapisz
+            </MudButton>
+        </DialogActions>
+    </MudDialog>
+</EditForm>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public WishlistItemFormModel Model { get; set; } = new();
+
+    [Parameter, EditorRequired]
+    public Func<WishlistItemFormModel, Task<ServiceResult>> OnSave { get; set; } = default!;
+
+    private string? _error;
+    private bool _isSaving;
+
+    private async Task SubmitAsync()
+    {
+        _isSaving = true;
+        _error = null;
+
+        try
+        {
+            var result = await OnSave(Model);
+            if (result.Succeeded)
+            {
+                MudDialog.Close(DialogResult.Ok(true));
+                return;
+            }
+
+            _error = result.Error;
+        }
+        catch (Exception)
+        {
+            _error = "Nie udało się zapisać prezentu. Spróbuj ponownie.";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

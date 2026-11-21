@@ -1,0 +1,175 @@
+@page "/others-letters/{MemberId}"
+
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
+@using eSanta.Common
+@using eSanta.Features.FamilyWishlists
+
+@attribute [Authorize]
+
+@inject IFamilyWishlistService FamilyWishlistService
+@inject ISnackbar Snackbar
+
+<PageTitle>@(_wishlist is null ? "List do św. Mikołaja" : $"List: {_wishlist.Alias}")</PageTitle>
+
+<MudButton Href="others-letters"
+           Variant="Variant.Text"
+           StartIcon="@Icons.Material.Filled.ArrowBack"
+           Class="mb-2">
+    Wróć do listy osób
+</MudButton>
+
+@if (_error is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+}
+else if (!_isLoaded)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+}
+else if (_wishlist is null)
+{
+    <MudAlert Severity="Severity.Warning">Nie znaleziono tej osoby w Twojej rodzinie.</MudAlert>
+}
+else
+{
+    <MudText Typo="Typo.h4" HtmlTag="h1" Class="mb-4">List do św. Mikołaja: @_wishlist.Alias</MudText>
+
+    <MudTable Items="_wishlist.Items"
+              Hover="true"
+              Breakpoint="Breakpoint.Sm"
+              Elevation="1">
+        <HeaderContent>
+            <MudTh>Nazwa</MudTh>
+            <MudTh>Opis</MudTh>
+            <MudTh>Link</MudTh>
+            <MudTh Style="text-align:right">Rezerwacja</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Nazwa"><strong>@context.Name</strong></MudTd>
+            <MudTd DataLabel="Opis" Style="white-space:pre-line">@context.Description</MudTd>
+            <MudTd DataLabel="Link">
+                @if (context.Link is not null)
+                {
+                    <MudLink Href="@context.Link" Target="_blank" rel="noopener noreferrer" Color="Color.Secondary">
+                        <MudIcon Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" Class="mr-1" Style="vertical-align:middle" />Otwórz
+                    </MudLink>
+                }
+                else
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">—</MudText>
+                }
+            </MudTd>
+            <MudTd DataLabel="Rezerwacja" Style="text-align:right">
+                @switch (context.Status)
+                {
+                    case ReservationStatus.Available:
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.CardGiftcard"
+                                   Disabled="_isBusy"
+                                   OnClick="@(() => ReserveAsync(context))">
+                            Zarezerwuj
+                        </MudButton>
+                        break;
+                    case ReservationStatus.ReservedByMe:
+                        <MudStack Row="true" Justify="Justify.FlexEnd" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Spacing="1">
+                            <MudChip T="string" Color="Color.Success" Size="Size.Small" Icon="@Icons.Material.Filled.CheckCircle">Zarezerwowane przez Ciebie</MudChip>
+                            <MudButton Variant="Variant.Outlined"
+                                       Color="Color.Default"
+                                       Size="Size.Small"
+                                       Disabled="_isBusy"
+                                       OnClick="@(() => CancelReservationAsync(context))">
+                                Cofnij rezerwację
+                            </MudButton>
+                        </MudStack>
+                        break;
+                    default:
+                        <MudChip T="string" Color="Color.Default" Size="Size.Small" Icon="@Icons.Material.Filled.Lock">Zarezerwowane</MudChip>
+                        break;
+                }
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText>@_wishlist.Alias nie dodał(a) jeszcze żadnych prezentów.</MudText>
+        </NoRecordsContent>
+    </MudTable>
+}
+
+@code {
+    [Parameter]
+    public string MemberId { get; set; } = string.Empty;
+
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    private string? _currentUserId;
+    private MemberWishlistDto? _wishlist;
+    private bool _isLoaded;
+    private bool _isBusy;
+    private string? _error;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _currentUserId ??= (await AuthenticationState).User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (_currentUserId is null)
+        {
+            _error = "Nie udało się ustalić zalogowanego użytkownika. Zaloguj się ponownie.";
+            return;
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            _wishlist = await FamilyWishlistService.GetMemberWishlistAsync(_currentUserId!, MemberId);
+            _error = null;
+        }
+        catch (Exception)
+        {
+            _error = "Nie udało się wczytać listu. Odśwież stronę.";
+        }
+        finally
+        {
+            _isLoaded = true;
+        }
+    }
+
+    private Task ReserveAsync(ReservableItemDto item) =>
+        ExecuteAsync(() => FamilyWishlistService.ReserveAsync(_currentUserId!, item.Id), $"Zarezerwowano „{item.Name}”.");
+
+    private Task CancelReservationAsync(ReservableItemDto item) =>
+        ExecuteAsync(() => FamilyWishlistService.CancelReservationAsync(_currentUserId!, item.Id), "Rezerwacja została cofnięta.");
+
+    private async Task ExecuteAsync(Func<Task<ServiceResult>> operation, string successMessage)
+    {
+        _isBusy = true;
+
+        try
+        {
+            var result = await operation();
+            if (result.Succeeded)
+            {
+                Snackbar.Add(successMessage, Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add(result.Error ?? "Operacja nie powiodła się.", Severity.Error);
+            }
+        }
+        catch (Exception)
+        {
+            Snackbar.Add("Nie udało się zapisać zmian. Spróbuj ponownie.", Severity.Error);
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+
+        await LoadAsync();
+    }
+}
