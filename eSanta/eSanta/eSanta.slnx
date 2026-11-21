@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/source/">
+    <Project Path="source/eSanta/eSanta.csproj" />
+  </Folder>
+  <Folder Name="/tests/" />
+</Solution>
