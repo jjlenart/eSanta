@@ -1,0 +1,118 @@
+@page "/admin"
+
+@using Microsoft.AspNetCore.Authorization
+@using eSanta.Components.Admin
+@using eSanta.Features.Administration
+
+@attribute [Authorize(Policy = AdminRequirement.PolicyName)]
+
+@inject IUserAdministrationService UserAdministrationService
+@inject ICurrentUser CurrentUser
+@inject IFormDialogService FormDialogService
+
+<PageTitle>Panel administratora</PageTitle>
+
+<MudText Typo="Typo.h4" HtmlTag="h1" Class="mb-2">Panel administratora</MudText>
+<MudText Typo="Typo.body2" Class="mb-4">Tutaj możesz ustawić nowe hasło użytkownikowi, który zapomniał swojego.</MudText>
+
+@if (_loadError is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_loadError</MudAlert>
+}
+
+@if (_users is null && _loadError is null)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+}
+else if (_users is not null)
+{
+    <MudTable Items="_users"
+              Hover="true"
+              Breakpoint="Breakpoint.Sm"
+              Elevation="1">
+        <HeaderContent>
+            <MudTh>Login</MudTh>
+            <MudTh>Alias</MudTh>
+            <MudTh>Rodzina</MudTh>
+            <MudTh Style="text-align:right">Akcje</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Login">
+                @context.UserName
+                @if (context.IsAdmin)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Outlined" Class="ml-1">admin</MudChip>
+                }
+            </MudTd>
+            <MudTd DataLabel="Alias">@context.Alias</MudTd>
+            <MudTd DataLabel="Rodzina">@(context.FamilyName ?? "—")</MudTd>
+            <MudTd DataLabel="Akcje" Style="text-align:right; white-space:nowrap">
+                @if (context.IsCurrentUser)
+                {
+                    <MudButton Href="Account/Manage/ChangePassword"
+                               Variant="Variant.Text"
+                               StartIcon="@Icons.Material.Filled.Person"
+                               Size="Size.Small">
+                        Zmień swoje hasło
+                    </MudButton>
+                }
+                else
+                {
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.Key"
+                               Size="Size.Small"
+                               aria-label="@($"Ustaw hasło dla {context.UserName}")"
+                               OnClick="@(() => OpenSetPasswordDialogAsync(context))">
+                        Ustaw hasło
+                    </MudButton>
+                }
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText>Brak użytkowników.</MudText>
+        </NoRecordsContent>
+    </MudTable>
+}
+
+@code {
+    private string? _adminId;
+    private IReadOnlyList<ManagedUserDto>? _users;
+    private string? _loadError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _adminId = await CurrentUser.GetIdAsync();
+        if (_adminId is null)
+        {
+            _loadError = "Nie udało się ustalić zalogowanego użytkownika. Zaloguj się ponownie.";
+            return;
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            _users = await UserAdministrationService.GetUsersAsync(_adminId!);
+            _loadError = _users is null ? "Nie masz uprawnień administratora." : null;
+        }
+        catch (Exception)
+        {
+            _loadError = "Nie udało się wczytać listy użytkowników. Odśwież stronę.";
+        }
+    }
+
+    private async Task OpenSetPasswordDialogAsync(ManagedUserDto user)
+    {
+        var parameters = new DialogParameters<SetPasswordDialog>
+        {
+            { dialog => dialog.Model, new SetPasswordModel() },
+            { dialog => dialog.OnSave, model => UserAdministrationService.SetPasswordAsync(_adminId!, user.Id, model) }
+        };
+
+        await FormDialogService.ShowAsync($"Nowe hasło dla: {user.UserName}", parameters, $"Ustawiono nowe hasło dla {user.UserName}.", MaxWidth.ExtraSmall);
+    }
+}

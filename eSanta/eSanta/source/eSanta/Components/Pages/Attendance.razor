@@ -1,17 +1,16 @@
 @page "/"
 @page "/attendance"
 
-@using System.Security.Claims
 @using Microsoft.AspNetCore.Authorization
-@using eSanta.Common
 @using eSanta.Components.Attendance
 @using eSanta.Features.Attendance
 
 @attribute [Authorize]
 
 @inject IAttendeeService AttendeeService
-@inject IDialogService DialogService
-@inject ISnackbar Snackbar
+@inject ICurrentUser CurrentUser
+@inject IFormDialogService FormDialogService
+@inject IOperationFeedback OperationFeedback
 
 <PageTitle>Lista obecności</PageTitle>
 
@@ -92,6 +91,7 @@ else if (_attendees is not null)
                              ValueChanged="@(value => SetPresenceAsync(context, value))"
                              ReadOnly="!context.CanEdit"
                              Color="Color.Primary"
+                             Class="d-flex justify-center"
                              aria-label="@($"Obecny na Wigilii: {context.FullName}")" />
             </MudTd>
             <MudTd DataLabel="Wymiana prezentów" Style="text-align:center">
@@ -100,6 +100,7 @@ else if (_attendees is not null)
                              ValueChanged="@(value => SetGiftExchangeAsync(context, value))"
                              ReadOnly="!context.CanEdit"
                              Color="Color.Primary"
+                             Class="d-flex justify-center"
                              aria-label="@($"Wymiana prezentów: {context.FullName}")" />
             </MudTd>
             <MudTd DataLabel="Akcje" Style="text-align:right">
@@ -126,16 +127,6 @@ else if (_attendees is not null)
 }
 
 @code {
-    private static readonly DialogOptions FormDialogOptions = new()
-    {
-        MaxWidth = MaxWidth.Small,
-        FullWidth = true,
-        CloseOnEscapeKey = true
-    };
-
-    [CascadingParameter]
-    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
-
     private string? _currentUserId;
     private IReadOnlyList<AttendeeDto>? _attendees;
     private MyAttendanceDto? _myStatus;
@@ -144,7 +135,7 @@ else if (_attendees is not null)
 
     protected override async Task OnInitializedAsync()
     {
-        _currentUserId = (await AuthenticationState).User.FindFirstValue(ClaimTypes.NameIdentifier);
+        _currentUserId = await CurrentUser.GetIdAsync();
         if (_currentUserId is null)
         {
             _loadError = "Nie udało się ustalić zalogowanego użytkownika. Zaloguj się ponownie.";
@@ -175,7 +166,7 @@ else if (_attendees is not null)
 
         try
         {
-            await ExecuteAsync(() => AttendeeService.SetMyStatusAsync(_currentUserId!, status), successMessage: null);
+            await ExecuteAsync(() => AttendeeService.SetMyStatusAsync(_currentUserId!, status));
         }
         finally
         {
@@ -183,36 +174,22 @@ else if (_attendees is not null)
         }
     }
 
-    private async Task OpenAddDialogAsync()
+    private Task OpenAddDialogAsync() =>
+        ShowFormDialogAsync("Dodaj osobę", new AttendeeFormModel(), model => AttendeeService.AddAsync(model), "Dodano osobę do listy.");
+
+    private Task OpenEditDialogAsync(AttendeeDto attendee) =>
+        ShowFormDialogAsync("Edytuj osobę", AttendeeFormModel.FromDto(attendee), model => AttendeeService.UpdateAsync(attendee.Id, model), "Zapisano zmiany.");
+
+    private async Task ShowFormDialogAsync(string title, AttendeeFormModel model, Func<AttendeeFormModel, Task<ServiceResult>> onSave, string successMessage)
     {
         var parameters = new DialogParameters<AttendeeDialog>
         {
-            { dialog => dialog.Model, new AttendeeFormModel() },
-            { dialog => dialog.OnSave, model => AttendeeService.AddAsync(model) }
+            { dialog => dialog.Model, model },
+            { dialog => dialog.OnSave, onSave }
         };
 
-        await ShowFormDialogAsync("Dodaj osobę", parameters, "Dodano osobę do listy.");
-    }
-
-    private async Task OpenEditDialogAsync(AttendeeDto attendee)
-    {
-        var parameters = new DialogParameters<AttendeeDialog>
+        if (await FormDialogService.ShowAsync(title, parameters, successMessage))
         {
-            { dialog => dialog.Model, AttendeeFormModel.FromDto(attendee) },
-            { dialog => dialog.OnSave, model => AttendeeService.UpdateAsync(attendee.Id, model) }
-        };
-
-        await ShowFormDialogAsync("Edytuj osobę", parameters, "Zapisano zmiany.");
-    }
-
-    private async Task ShowFormDialogAsync(string title, DialogParameters<AttendeeDialog> parameters, string successMessage)
-    {
-        var dialog = await DialogService.ShowAsync<AttendeeDialog>(title, parameters, FormDialogOptions);
-        var result = await dialog.Result;
-
-        if (result is { Canceled: false })
-        {
-            Snackbar.Add(successMessage, Severity.Success);
             await LoadAsync();
         }
     }
@@ -233,50 +210,20 @@ else if (_attendees is not null)
         return SaveInlineAsync(attendee.Id, model);
     }
 
-    private async Task SaveInlineAsync(int id, AttendeeFormModel model)
-    {
-        await ExecuteAsync(() => AttendeeService.UpdateAsync(id, model), successMessage: null);
-    }
+    private Task SaveInlineAsync(int id, AttendeeFormModel model) =>
+        ExecuteAsync(() => AttendeeService.UpdateAsync(id, model));
 
     private async Task DeleteAsync(AttendeeDto attendee)
     {
-        var confirmed = await DialogService.ShowMessageBoxAsync(
-            "Usuń osobę",
-            $"Czy na pewno chcesz usunąć „{attendee.FullName}” z listy?",
-            yesText: "Usuń",
-            cancelText: "Anuluj");
-
-        if (confirmed != true)
+        if (await FormDialogService.ConfirmDeleteAsync("Usuń osobę", $"Czy na pewno chcesz usunąć „{attendee.FullName}” z listy?"))
         {
-            return;
+            await ExecuteAsync(() => AttendeeService.DeleteAsync(attendee.Id), "Usunięto osobę z listy.");
         }
-
-        await ExecuteAsync(() => AttendeeService.DeleteAsync(attendee.Id), "Usunięto osobę z listy.");
     }
 
-    private async Task ExecuteAsync(Func<Task<ServiceResult>> operation, string? successMessage)
+    private async Task ExecuteAsync(Func<Task<ServiceResult>> operation, string? successMessage = null)
     {
-        try
-        {
-            var result = await operation();
-
-            if (result.Succeeded)
-            {
-                if (successMessage is not null)
-                {
-                    Snackbar.Add(successMessage, Severity.Success);
-                }
-            }
-            else
-            {
-                Snackbar.Add(result.Error ?? "Operacja nie powiodła się.", Severity.Error);
-            }
-        }
-        catch (Exception)
-        {
-            Snackbar.Add("Nie udało się zapisać zmian. Spróbuj ponownie.", Severity.Error);
-        }
-
+        await OperationFeedback.ExecuteAsync(operation, successMessage);
         await LoadAsync();
     }
 }

@@ -1,0 +1,15 @@
+@if (Href is not null)
+{
+    <MudLink Href="@Href" Target="_blank" rel="noopener noreferrer" Color="Color.Secondary">
+        <MudIcon Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" Class="mr-1" Style="vertical-align:middle" />Otwórz
+    </MudLink>
+}
+else
+{
+    <MudText Typo="Typo.body2" Color="Color.Secondary">—</MudText>
+}
+
+@code {
+    [Parameter]
+    public string? Href { get; set; }
+}

@@ -1,11 +1,12 @@
-using System.ComponentModel.DataAnnotations;
 using eSanta.Common;
 using eSanta.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace eSanta.Features.ShoppingList;
 
-public sealed class ShoppingListService(IDbContextFactory<ApplicationDbContext> dbContextFactory) : IShoppingListService
+public sealed class ShoppingListService(
+    IDbContextFactory<ApplicationDbContext> dbContextFactory,
+    IModelValidator modelValidator) : IShoppingListService
 {
     private const string RecipientNotFoundError = "Nie znaleziono tej osoby. Mogła zostać usunięta z listy obecności.";
     private const string RecipientNameRequiredError = "Podaj imię osoby, dla której kupujesz prezent.";
@@ -39,10 +40,23 @@ public sealed class ShoppingListService(IDbContextFactory<ApplicationDbContext> 
             .Where(entry => entry.OwnerId == ownerId)
             .ToListAsync(cancellationToken);
 
+        var ownerFamilyId = await dbContext.Users
+            .Where(user => user.Id == ownerId)
+            .Select(user => user.FamilyId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        HashSet<string> familyMemberIds = ownerFamilyId is null
+            ? []
+            : (await dbContext.Users
+                .Where(user => user.FamilyId == ownerFamilyId && user.Id != ownerId)
+                .Select(user => user.Id)
+                .ToListAsync(cancellationToken))
+                .ToHashSet();
+
         var registeredRecipients = attendees
             .Where(attendee => attendee.UserId is not null)
-            .Select(attendee => (UserId: attendee.UserId!, Name: ToAlias(attendee.DisplayName, attendee.UserName, attendee.FullName)))
-            .Concat(reservations.Select(reservation => (UserId: reservation.OwnerId, Name: ToAlias(reservation.DisplayName, reservation.UserName, "?"))))
+            .Select(attendee => (UserId: attendee.UserId!, Name: ApplicationUser.ToAlias(attendee.DisplayName, attendee.UserName, attendee.FullName)))
+            .Concat(reservations.Select(reservation => (UserId: reservation.OwnerId, Name: ApplicationUser.ToAlias(reservation.DisplayName, reservation.UserName, "?"))))
             .DistinctBy(recipient => recipient.UserId);
 
         var rows = new List<ShoppingListRowDto>();
@@ -55,7 +69,8 @@ public sealed class ShoppingListService(IDbContextFactory<ApplicationDbContext> 
                 .Select(reservation => reservation.Name)
                 .ToList();
 
-            rows.Add(CreateRow(ShoppingRecipient.ForUser(recipient.UserId), recipient.Name, entry, reservedNames));
+            rows.Add(CreateRow(ShoppingRecipient.ForUser(recipient.UserId), recipient.Name, entry, reservedNames)
+                with { HasLetter = familyMemberIds.Contains(recipient.UserId) });
         }
 
         foreach (var attendee in attendees.Where(attendee => attendee.UserId is null))
@@ -76,10 +91,10 @@ public sealed class ShoppingListService(IDbContextFactory<ApplicationDbContext> 
 
     public async Task<ServiceResult> SaveAsync(string ownerId, ShoppingRecipient recipient, ShoppingEntryFormModel model, CancellationToken cancellationToken = default)
     {
-        var validationError = Validate(model);
-        if (validationError is not null)
+        var validationErrors = modelValidator.Validate(model);
+        if (validationErrors.Count > 0)
         {
-            return ServiceResult.Failure(validationError);
+            return ServiceResult.Failure(validationErrors);
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -142,10 +157,10 @@ public sealed class ShoppingListService(IDbContextFactory<ApplicationDbContext> 
 
     public async Task<ServiceResult> AddCustomAsync(string ownerId, ShoppingEntryFormModel model, CancellationToken cancellationToken = default)
     {
-        var validationError = Validate(model);
-        if (validationError is not null)
+        var validationErrors = modelValidator.Validate(model);
+        if (validationErrors.Count > 0)
         {
-            return ServiceResult.Failure(validationError);
+            return ServiceResult.Failure(validationErrors);
         }
 
         if (string.IsNullOrWhiteSpace(model.RecipientName))
@@ -199,7 +214,7 @@ public sealed class ShoppingListService(IDbContextFactory<ApplicationDbContext> 
             .Select(user => new { user.DisplayName, user.UserName })
             .FirstOrDefaultAsync(cancellationToken);
 
-        return user is null ? null : Truncate(ToAlias(user.DisplayName, user.UserName, "?"), ShoppingListEntry.RecipientNameMaxLength);
+        return user is null ? null : Truncate(ApplicationUser.ToAlias(user.DisplayName, user.UserName, "?"), ShoppingListEntry.RecipientNameMaxLength);
     }
 
     private static Task<ShoppingListEntry?> FindCustomEntryAsync(ApplicationDbContext dbContext, string ownerId, int entryId, CancellationToken cancellationToken) =>
@@ -236,25 +251,11 @@ public sealed class ShoppingListService(IDbContextFactory<ApplicationDbContext> 
         return ServiceResult.Success();
     }
 
-    private static string? Validate(ShoppingEntryFormModel model)
-    {
-        var results = new List<ValidationResult>();
-        var isValid = Validator.TryValidateObject(model, new ValidationContext(model), results, validateAllProperties: true);
-
-        return isValid ? null : string.Join(" ", results.Select(result => result.ErrorMessage));
-    }
-
     private static void Apply(ShoppingEntryFormModel model, ShoppingListEntry entry)
     {
         entry.GiftName = string.IsNullOrWhiteSpace(model.GiftName) ? null : model.GiftName.Trim();
         entry.IsBought = model.IsBought;
         entry.Note = string.IsNullOrWhiteSpace(model.Note) ? null : model.Note.Trim();
-    }
-
-    private static string ToAlias(string? displayName, string? userName, string fallback)
-    {
-        var alias = ApplicationUser.ToAlias(displayName, userName);
-        return string.IsNullOrWhiteSpace(alias) ? fallback : alias;
     }
 
     private static string Truncate(string value, int maxLength) =>

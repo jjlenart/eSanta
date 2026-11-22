@@ -1,18 +1,19 @@
-using System.ComponentModel.DataAnnotations;
 using eSanta.Common;
 using eSanta.Data;
 using Microsoft.AspNetCore.Identity;
 
 namespace eSanta.Features.Account;
 
-public sealed class AliasService(UserManager<ApplicationUser> userManager) : IAliasService
+public sealed class AliasService(
+    UserManager<ApplicationUser> userManager,
+    IModelValidator modelValidator) : IAliasService
 {
     public async Task<ServiceResult> ChangeAliasAsync(ApplicationUser user, AliasModel model)
     {
-        var results = new List<ValidationResult>();
-        if (!Validator.TryValidateObject(model, new ValidationContext(model), results, validateAllProperties: true))
+        var validationErrors = modelValidator.Validate(model);
+        if (validationErrors.Count > 0)
         {
-            return ServiceResult.Failure(string.Join(" ", results.Select(result => result.ErrorMessage)));
+            return ServiceResult.Failure(validationErrors);
         }
 
         user.DisplayName = model.Alias.Trim();
@@ -20,6 +21,6 @@ public sealed class AliasService(UserManager<ApplicationUser> userManager) : IAl
 
         return updateResult.Succeeded
             ? ServiceResult.Success()
-            : ServiceResult.Failure(string.Join(" ", updateResult.Errors.Select(error => error.Description)));
+            : ServiceResult.Failure(updateResult.Errors.Select(error => error.Description));
     }
 }

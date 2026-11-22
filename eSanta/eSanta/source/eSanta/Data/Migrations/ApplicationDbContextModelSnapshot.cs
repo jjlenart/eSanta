@@ -201,6 +201,9 @@ namespace eSanta.Data.Migrations
                     b.Property<int?>("FamilyId")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("IsAdmin")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("boolean");
 

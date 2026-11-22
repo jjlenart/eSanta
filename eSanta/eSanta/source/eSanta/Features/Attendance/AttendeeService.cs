@@ -1,11 +1,12 @@
-using System.ComponentModel.DataAnnotations;
 using eSanta.Common;
 using eSanta.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace eSanta.Features.Attendance;
 
-public sealed class AttendeeService(IDbContextFactory<ApplicationDbContext> dbContextFactory) : IAttendeeService
+public sealed class AttendeeService(
+    IDbContextFactory<ApplicationDbContext> dbContextFactory,
+    IModelValidator modelValidator) : IAttendeeService
 {
     private const string NotFoundError = "Nie znaleziono osoby. Mogła zostać usunięta przez innego użytkownika.";
     private const string RegisteredUserError = "Tę pozycję może zmienić tylko jej właściciel.";
@@ -31,7 +32,7 @@ public sealed class AttendeeService(IDbContextFactory<ApplicationDbContext> dbCo
         return attendees
             .Select(attendee => new AttendeeDto(
                 attendee.Id,
-                attendee.UserId is null ? attendee.FullName : ToAlias(attendee.DisplayName, attendee.UserName, attendee.FullName),
+                attendee.UserId is null ? attendee.FullName : ApplicationUser.ToAlias(attendee.DisplayName, attendee.UserName, attendee.FullName),
                 attendee.IsPresentAtChristmasEve,
                 attendee.ParticipatesInGiftExchange,
                 IsRegisteredUser: attendee.UserId is not null,
@@ -75,7 +76,7 @@ public sealed class AttendeeService(IDbContextFactory<ApplicationDbContext> dbCo
             dbContext.Attendees.Add(attendee);
         }
 
-        var alias = ToAlias(user.DisplayName, user.UserName, fallback: "?");
+        var alias = ApplicationUser.ToAlias(user.DisplayName, user.UserName, fallback: "?");
         attendee.FullName = alias.Length > Attendee.FullNameMaxLength ? alias[..Attendee.FullNameMaxLength] : alias;
         attendee.IsPresentAtChristmasEve = status.IsPresentAtChristmasEve;
         attendee.ParticipatesInGiftExchange = status.ParticipatesInGiftExchange;
@@ -94,10 +95,10 @@ public sealed class AttendeeService(IDbContextFactory<ApplicationDbContext> dbCo
 
     public async Task<ServiceResult> AddAsync(AttendeeFormModel model, CancellationToken cancellationToken = default)
     {
-        var validationError = Validate(model);
-        if (validationError is not null)
+        var validationErrors = modelValidator.Validate(model);
+        if (validationErrors.Count > 0)
         {
-            return ServiceResult.Failure(validationError);
+            return ServiceResult.Failure(validationErrors);
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -112,10 +113,10 @@ public sealed class AttendeeService(IDbContextFactory<ApplicationDbContext> dbCo
 
     public async Task<ServiceResult> UpdateAsync(int id, AttendeeFormModel model, CancellationToken cancellationToken = default)
     {
-        var validationError = Validate(model);
-        if (validationError is not null)
+        var validationErrors = modelValidator.Validate(model);
+        if (validationErrors.Count > 0)
         {
-            return ServiceResult.Failure(validationError);
+            return ServiceResult.Failure(validationErrors);
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -170,23 +171,10 @@ public sealed class AttendeeService(IDbContextFactory<ApplicationDbContext> dbCo
         return ServiceResult.Success();
     }
 
-    private static string? Validate(AttendeeFormModel model)
-    {
-        var results = new List<ValidationResult>();
-        var isValid = Validator.TryValidateObject(model, new ValidationContext(model), results, validateAllProperties: true);
-
-        return isValid ? null : string.Join(" ", results.Select(result => result.ErrorMessage));
-    }
-
     private static void Apply(AttendeeFormModel model, Attendee attendee)
     {
         attendee.FullName = model.FullName.Trim();
         attendee.IsPresentAtChristmasEve = model.IsPresentAtChristmasEve;
         attendee.ParticipatesInGiftExchange = model.ParticipatesInGiftExchange;
     }
-
-    private static string ToAlias(string? displayName, string? userName, string fallback) =>
-        !string.IsNullOrWhiteSpace(displayName) ? displayName
-        : !string.IsNullOrWhiteSpace(userName) ? userName
-        : fallback;
 }

@@ -1,3 +1,4 @@
+using eSanta.Common;
 using eSanta.Data;
 using eSanta.Features.Wishlist;
 using eSanta.Tests.Infrastructure;
@@ -16,7 +17,7 @@ public class WishlistServiceTests
 
     public WishlistServiceTests()
     {
-        _service = new WishlistService(_dbContextFactory);
+        _service = new WishlistService(_dbContextFactory, new DataAnnotationsModelValidator());
     }
 
     [Fact]

@@ -1,11 +1,12 @@
-using System.ComponentModel.DataAnnotations;
 using eSanta.Common;
 using eSanta.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace eSanta.Features.Wishlist;
 
-public sealed class WishlistService(IDbContextFactory<ApplicationDbContext> dbContextFactory) : IWishlistService
+public sealed class WishlistService(
+    IDbContextFactory<ApplicationDbContext> dbContextFactory,
+    IModelValidator modelValidator) : IWishlistService
 {
     private const string NotFoundError = "Nie znaleziono prezentu. Mógł zostać już usunięty.";
     private const string ConcurrencyError = "Prezent został w międzyczasie zmieniony. Odśwież stronę i spróbuj ponownie.";
@@ -24,10 +25,10 @@ public sealed class WishlistService(IDbContextFactory<ApplicationDbContext> dbCo
 
     public async Task<ServiceResult> AddAsync(string ownerId, WishlistItemFormModel model, CancellationToken cancellationToken = default)
     {
-        var validationError = Validate(model);
-        if (validationError is not null)
+        var validationErrors = modelValidator.Validate(model);
+        if (validationErrors.Count > 0)
         {
-            return ServiceResult.Failure(validationError);
+            return ServiceResult.Failure(validationErrors);
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -42,10 +43,10 @@ public sealed class WishlistService(IDbContextFactory<ApplicationDbContext> dbCo
 
     public async Task<ServiceResult> UpdateAsync(string ownerId, int itemId, WishlistItemFormModel model, CancellationToken cancellationToken = default)
     {
-        var validationError = Validate(model);
-        if (validationError is not null)
+        var validationErrors = modelValidator.Validate(model);
+        if (validationErrors.Count > 0)
         {
-            return ServiceResult.Failure(validationError);
+            return ServiceResult.Failure(validationErrors);
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -91,14 +92,6 @@ public sealed class WishlistService(IDbContextFactory<ApplicationDbContext> dbCo
         }
 
         return ServiceResult.Success();
-    }
-
-    private static string? Validate(WishlistItemFormModel model)
-    {
-        var results = new List<ValidationResult>();
-        var isValid = Validator.TryValidateObject(model, new ValidationContext(model), results, validateAllProperties: true);
-
-        return isValid ? null : string.Join(" ", results.Select(result => result.ErrorMessage));
     }
 
     private static void Apply(WishlistItemFormModel model, WishlistItem item)

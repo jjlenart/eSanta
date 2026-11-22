@@ -1,12 +1,12 @@
 @page "/others-letters"
 
-@using System.Security.Claims
 @using Microsoft.AspNetCore.Authorization
 @using eSanta.Features.FamilyWishlists
 
 @attribute [Authorize]
 
 @inject IFamilyWishlistService FamilyWishlistService
+@inject ICurrentUser CurrentUser
 
 <PageTitle>Listy innych osób</PageTitle>
 
@@ -55,15 +55,12 @@ else
 }
 
 @code {
-    [CascadingParameter]
-    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
-
     private FamilyMembersResult? _result;
     private string? _error;
 
     protected override async Task OnInitializedAsync()
     {
-        var userId = (await AuthenticationState).User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = await CurrentUser.GetIdAsync();
         if (userId is null)
         {
             _error = "Nie udało się ustalić zalogowanego użytkownika. Zaloguj się ponownie.";

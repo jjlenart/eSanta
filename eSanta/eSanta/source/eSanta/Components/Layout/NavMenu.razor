@@ -1,6 +1,7 @@
 ﻿@implements IDisposable
 
 @using eSanta.Data
+@using eSanta.Features.Administration
 
 @inject NavigationManager NavigationManager
 
@@ -11,6 +12,9 @@
             <MudNavLink Href="my-letter" Icon="@Icons.Material.Filled.Mail">Mój list do św. Mikołaja</MudNavLink>
             <MudNavLink Href="others-letters" Icon="@Icons.Material.Filled.MarkEmailRead">Listy innych osób</MudNavLink>
             <MudNavLink Href="shopping-list" Icon="@Icons.Material.Filled.ShoppingCart">Moja lista zakupowa</MudNavLink>
+            <AuthorizeView Policy="@AdminRequirement.PolicyName" Context="adminContext">
+                <MudNavLink Href="admin" Icon="@Icons.Material.Filled.AdminPanelSettings">Panel administratora</MudNavLink>
+            </AuthorizeView>
 
             <MudDivider Class="my-2" />
 

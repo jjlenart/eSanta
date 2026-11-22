@@ -1,16 +1,15 @@
 @page "/shopping-list"
 
-@using System.Security.Claims
 @using Microsoft.AspNetCore.Authorization
-@using eSanta.Common
 @using eSanta.Components.Shopping
 @using eSanta.Features.ShoppingList
 
 @attribute [Authorize]
 
 @inject IShoppingListService ShoppingListService
-@inject IDialogService DialogService
-@inject ISnackbar Snackbar
+@inject ICurrentUser CurrentUser
+@inject IFormDialogService FormDialogService
+@inject IOperationFeedback OperationFeedback
 
 <PageTitle>Moja lista zakupowa</PageTitle>
 
@@ -55,7 +54,20 @@ else if (_rows is not null)
         </HeaderContent>
         <RowTemplate>
             <MudTd DataLabel="Osoba">
-                <strong>@context.RecipientName</strong>
+                @if (context.HasLetter)
+                {
+                    <MudTooltip Text="Zobacz list tej osoby">
+                        <MudLink Href="@($"others-letters/{Uri.EscapeDataString(context.Recipient.UserId!)}")"
+                                 Typo="Typo.body2"
+                                 Underline="Underline.Always">
+                            <strong>@context.RecipientName</strong>
+                        </MudLink>
+                    </MudTooltip>
+                }
+                else
+                {
+                    <strong>@context.RecipientName</strong>
+                }
                 @if (context.Recipient.IsCustom)
                 {
                     <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="ml-1">spoza listy</MudChip>
@@ -88,6 +100,7 @@ else if (_rows is not null)
                              Value="context.IsBought"
                              ValueChanged="@(value => SetBoughtAsync(context, value))"
                              Color="Color.Primary"
+                             Class="d-flex justify-center"
                              aria-label="@($"Kupione: {context.RecipientName}")" />
             </MudTd>
             <MudTd DataLabel="Notatka" Style="white-space:pre-line">@context.Note</MudTd>
@@ -115,23 +128,13 @@ else if (_rows is not null)
 }
 
 @code {
-    private static readonly DialogOptions FormDialogOptions = new()
-    {
-        MaxWidth = MaxWidth.Small,
-        FullWidth = true,
-        CloseOnEscapeKey = true
-    };
-
-    [CascadingParameter]
-    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
-
     private string? _ownerId;
     private IReadOnlyList<ShoppingListRowDto>? _rows;
     private string? _loadError;
 
     protected override async Task OnInitializedAsync()
     {
-        _ownerId = (await AuthenticationState).User.FindFirstValue(ClaimTypes.NameIdentifier);
+        _ownerId = await CurrentUser.GetIdAsync();
         if (_ownerId is null)
         {
             _loadError = "Nie udało się ustalić zalogowanego użytkownika. Zaloguj się ponownie.";
@@ -181,22 +184,18 @@ else if (_rows is not null)
 
     private async Task ShowDialogAsync(string title, DialogParameters<ShoppingEntryDialog> parameters, string successMessage)
     {
-        var dialog = await DialogService.ShowAsync<ShoppingEntryDialog>(title, parameters, FormDialogOptions);
-        var result = await dialog.Result;
-
-        if (result is { Canceled: false })
+        if (await FormDialogService.ShowAsync(title, parameters, successMessage))
         {
-            Snackbar.Add(successMessage, Severity.Success);
             await LoadAsync();
         }
     }
 
-    private async Task SetBoughtAsync(ShoppingListRowDto row, bool isBought)
+    private Task SetBoughtAsync(ShoppingListRowDto row, bool isBought)
     {
         var model = ShoppingEntryFormModel.FromRow(row);
         model.IsBought = isBought;
 
-        await ExecuteAsync(() => ShoppingListService.SaveAsync(_ownerId!, row.Recipient, model), successMessage: null);
+        return ExecuteAsync(() => ShoppingListService.SaveAsync(_ownerId!, row.Recipient, model));
     }
 
     private async Task DeleteAsync(ShoppingListRowDto row)
@@ -206,42 +205,15 @@ else if (_rows is not null)
             return;
         }
 
-        var confirmed = await DialogService.ShowMessageBoxAsync(
-            "Usuń wpis",
-            $"Czy na pewno chcesz usunąć wpis dla „{row.RecipientName}”?",
-            yesText: "Usuń",
-            cancelText: "Anuluj");
-
-        if (confirmed != true)
+        if (await FormDialogService.ConfirmDeleteAsync("Usuń wpis", $"Czy na pewno chcesz usunąć wpis dla „{row.RecipientName}”?"))
         {
-            return;
+            await ExecuteAsync(() => ShoppingListService.DeleteCustomAsync(_ownerId!, entryId), "Usunięto wpis.");
         }
-
-        await ExecuteAsync(() => ShoppingListService.DeleteCustomAsync(_ownerId!, entryId), "Usunięto wpis.");
     }
 
-    private async Task ExecuteAsync(Func<Task<ServiceResult>> operation, string? successMessage)
+    private async Task ExecuteAsync(Func<Task<ServiceResult>> operation, string? successMessage = null)
     {
-        try
-        {
-            var result = await operation();
-            if (result.Succeeded)
-            {
-                if (successMessage is not null)
-                {
-                    Snackbar.Add(successMessage, Severity.Success);
-                }
-            }
-            else
-            {
-                Snackbar.Add(result.Error ?? "Operacja nie powiodła się.", Severity.Error);
-            }
-        }
-        catch (Exception)
-        {
-            Snackbar.Add("Nie udało się zapisać zmian. Spróbuj ponownie.", Severity.Error);
-        }
-
+        await OperationFeedback.ExecuteAsync(operation, successMessage);
         await LoadAsync();
     }
 }

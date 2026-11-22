@@ -1,0 +1,51 @@
+<EditForm Model="Model" OnValidSubmit="@(() => OnValidSubmit.InvokeAsync())">
+    <DataAnnotationsValidator />
+
+    <MudDialog>
+        <DialogContent>
+            @if (Error is not null)
+            {
+                <MudAlert Severity="Severity.Error" Class="mb-3">@Error</MudAlert>
+            }
+
+            <MudStack Spacing="Spacing">
+                @ChildContent
+            </MudStack>
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="OnCancel" Disabled="IsSaving">Anuluj</MudButton>
+            <MudButton ButtonType="ButtonType.Submit"
+                       Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       Disabled="IsSaving">
+                @SubmitText
+            </MudButton>
+        </DialogActions>
+    </MudDialog>
+</EditForm>
+
+@code {
+    [Parameter, EditorRequired]
+    public object Model { get; set; } = default!;
+
+    [Parameter]
+    public string? Error { get; set; }
+
+    [Parameter]
+    public bool IsSaving { get; set; }
+
+    [Parameter]
+    public EventCallback OnValidSubmit { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    [Parameter]
+    public string SubmitText { get; set; } = "Zapisz";
+
+    [Parameter]
+    public int Spacing { get; set; } = 2;
+
+    [Parameter, EditorRequired]
+    public RenderFragment ChildContent { get; set; } = default!;
+}

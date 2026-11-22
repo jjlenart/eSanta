@@ -1,126 +1,65 @@
-@using eSanta.Common
 @using eSanta.Data
 @using eSanta.Features.ShoppingList
 
-<EditForm Model="Model" OnValidSubmit="SubmitAsync">
-    <DataAnnotationsValidator />
+@inherits FormDialogBase<ShoppingEntryFormModel>
 
-    <MudDialog>
-        <DialogContent>
-            @if (_error is not null)
-            {
-                <MudAlert Severity="Severity.Error" Class="mb-3">@_error</MudAlert>
-            }
+<FormDialogLayout Model="Model" Error="@Error" IsSaving="IsSaving" OnValidSubmit="SubmitAsync" OnCancel="Cancel">
+    @if (IsCustomRecipient)
+    {
+        <MudTextField @bind-Value="Model.RecipientName"
+                      For="@(() => Model.RecipientName)"
+                      Label="Dla kogo"
+                      Required="true"
+                      RequiredError="Podaj imię osoby, dla której kupujesz prezent."
+                      Variant="Variant.Outlined"
+                      MaxLength="ShoppingListEntry.RecipientNameMaxLength"
+                      Immediate="true"
+                      AutoFocus="true" />
+    }
 
-            <MudStack Spacing="2">
-                @if (IsCustomRecipient)
-                {
-                    <MudTextField @bind-Value="Model.RecipientName"
-                                  For="@(() => Model.RecipientName)"
-                                  Label="Dla kogo"
-                                  Required="true"
-                                  RequiredError="Podaj imię osoby, dla której kupujesz prezent."
-                                  Variant="Variant.Outlined"
-                                  MaxLength="ShoppingListEntry.RecipientNameMaxLength"
-                                  Immediate="true"
-                                  AutoFocus="true" />
-                }
+    @if (ReservedGiftNames is not null)
+    {
+        <MudTextField T="string"
+                      Value="ReservedGiftNames"
+                      Label="Nazwa prezentu"
+                      HelperText="Uzupełniane automatycznie z Twojej rezerwacji na liście tej osoby."
+                      Variant="Variant.Outlined"
+                      ReadOnly="true"
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Bookmark"
+                      AdornmentColor="Color.Success" />
+    }
+    else
+    {
+        <MudTextField @bind-Value="Model.GiftName"
+                      For="@(() => Model.GiftName)"
+                      Label="Nazwa prezentu"
+                      HelperText="Wpisz, jeśli kupujesz prezent spoza listu tej osoby."
+                      Variant="Variant.Outlined"
+                      MaxLength="ShoppingListEntry.GiftNameMaxLength"
+                      Immediate="true"
+                      AutoFocus="@(!IsCustomRecipient)" />
+    }
 
-                @if (ReservedGiftNames is not null)
-                {
-                    <MudTextField T="string"
-                                  Value="ReservedGiftNames"
-                                  Label="Nazwa prezentu"
-                                  HelperText="Uzupełniane automatycznie z Twojej rezerwacji na liście tej osoby."
-                                  Variant="Variant.Outlined"
-                                  ReadOnly="true"
-                                  Adornment="Adornment.Start"
-                                  AdornmentIcon="@Icons.Material.Filled.Bookmark"
-                                  AdornmentColor="Color.Success" />
-                }
-                else
-                {
-                    <MudTextField @bind-Value="Model.GiftName"
-                                  For="@(() => Model.GiftName)"
-                                  Label="Nazwa prezentu"
-                                  HelperText="Wpisz, jeśli kupujesz prezent spoza listu tej osoby."
-                                  Variant="Variant.Outlined"
-                                  MaxLength="ShoppingListEntry.GiftNameMaxLength"
-                                  Immediate="true"
-                                  AutoFocus="@(!IsCustomRecipient)" />
-                }
+    <MudCheckBox @bind-Value="Model.IsBought"
+                 Label="Kupione"
+                 Color="Color.Primary" />
 
-                <MudCheckBox @bind-Value="Model.IsBought"
-                             Label="Kupione"
-                             Color="Color.Primary" />
-
-                <MudTextField @bind-Value="Model.Note"
-                              For="@(() => Model.Note)"
-                              Label="Notatka"
-                              HelperText="Twój prywatny opis, np. gdzie kupić albo ile kosztuje."
-                              Variant="Variant.Outlined"
-                              MaxLength="ShoppingListEntry.NoteMaxLength"
-                              Lines="3"
-                              Sizing="InputSizing.Auto"
-                              Immediate="true" />
-            </MudStack>
-        </DialogContent>
-        <DialogActions>
-            <MudButton OnClick="Cancel" Disabled="_isSaving">Anuluj</MudButton>
-            <MudButton ButtonType="ButtonType.Submit"
-                       Variant="Variant.Filled"
-                       Color="Color.Primary"
-                       Disabled="_isSaving">
-                Zapisz
-            </MudButton>
-        </DialogActions>
-    </MudDialog>
-</EditForm>
+    <MudTextField @bind-Value="Model.Note"
+                  For="@(() => Model.Note)"
+                  Label="Notatka"
+                  HelperText="Twój prywatny opis, np. gdzie kupić albo ile kosztuje."
+                  Variant="Variant.Outlined"
+                  MaxLength="ShoppingListEntry.NoteMaxLength"
+                  Lines="3"
+                  Sizing="InputSizing.Auto"
+                  Immediate="true" />
+</FormDialogLayout>
 
 @code {
-    [CascadingParameter]
-    private IMudDialogInstance MudDialog { get; set; } = default!;
-
-    [Parameter, EditorRequired]
-    public ShoppingEntryFormModel Model { get; set; } = new();
-
     [Parameter]
     public bool IsCustomRecipient { get; set; }
 
     [Parameter]
     public string? ReservedGiftNames { get; set; }
-
-    [Parameter, EditorRequired]
-    public Func<ShoppingEntryFormModel, Task<ServiceResult>> OnSave { get; set; } = default!;
-
-    private string? _error;
-    private bool _isSaving;
-
-    private async Task SubmitAsync()
-    {
-        _isSaving = true;
-        _error = null;
-
-        try
-        {
-            var result = await OnSave(Model);
-            if (result.Succeeded)
-            {
-                MudDialog.Close(DialogResult.Ok(true));
-                return;
-            }
-
-            _error = result.Error;
-        }
-        catch (Exception)
-        {
-            _error = "Nie udało się zapisać zmian. Spróbuj ponownie.";
-        }
-        finally
-        {
-            _isSaving = false;
-        }
-    }
-
-    private void Cancel() => MudDialog.Cancel();
 }

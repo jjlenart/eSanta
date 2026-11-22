@@ -1,3 +1,4 @@
+using eSanta.Common;
 using eSanta.Data;
 using eSanta.Features.Attendance;
 using eSanta.Tests.Infrastructure;
@@ -13,7 +14,7 @@ public class AttendeeServiceTests
 
     public AttendeeServiceTests()
     {
-        _service = new AttendeeService(_dbContextFactory);
+        _service = new AttendeeService(_dbContextFactory, new DataAnnotationsModelValidator());
     }
 
     [Fact]

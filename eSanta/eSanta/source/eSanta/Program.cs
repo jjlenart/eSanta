@@ -1,12 +1,16 @@
+using eSanta.Common;
 using eSanta.Components;
 using eSanta.Components.Account;
+using eSanta.Components.Shared;
 using eSanta.Data;
 using eSanta.Features.Account;
+using eSanta.Features.Administration;
 using eSanta.Features.Attendance;
 using eSanta.Features.FamilyWishlists;
 using eSanta.Features.Registration;
 using eSanta.Features.ShoppingList;
 using eSanta.Features.Wishlist;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -35,12 +39,24 @@ builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddMudServices();
+builder.Services.AddScoped<ICurrentUser, CurrentUser>();
+builder.Services.AddScoped<IFormDialogService, FormDialogService>();
+builder.Services.AddScoped<IOperationFeedback, SnackbarOperationFeedback>();
+
+builder.Services.AddSingleton<IModelValidator, DataAnnotationsModelValidator>();
 builder.Services.AddScoped<IAttendeeService, AttendeeService>();
 builder.Services.AddScoped<IRegistrationService, RegistrationService>();
 builder.Services.AddScoped<IAliasService, AliasService>();
 builder.Services.AddScoped<IWishlistService, WishlistService>();
 builder.Services.AddScoped<IFamilyWishlistService, FamilyWishlistService>();
 builder.Services.AddScoped<IShoppingListService, ShoppingListService>();
+builder.Services.AddScoped<IUserAdministrationService, UserAdministrationService>();
+
+builder.Services.AddScoped<IAuthorizationHandler, AdminAuthorizationHandler>();
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy(AdminRequirement.PolicyName, policy => policy
+        .RequireAuthenticatedUser()
+        .AddRequirements(new AdminRequirement()));
 
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
     {

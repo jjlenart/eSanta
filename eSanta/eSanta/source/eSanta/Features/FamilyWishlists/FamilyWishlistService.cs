@@ -31,7 +31,7 @@ public sealed class FamilyWishlistService(IDbContextFactory<ApplicationDbContext
             .ToListAsync(cancellationToken);
 
         var memberDtos = members
-            .Select(member => new FamilyMemberDto(member.Id, ToAlias(member.DisplayName, member.UserName)))
+            .Select(member => new FamilyMemberDto(member.Id, ApplicationUser.ToAlias(member.DisplayName, member.UserName)))
             .OrderBy(member => member.Alias, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
 
@@ -69,7 +69,7 @@ public sealed class FamilyWishlistService(IDbContextFactory<ApplicationDbContext
                 ToStatus(item.ReservedById, currentUserId)))
             .ToList();
 
-        return new MemberWishlistDto(memberId, ToAlias(member.DisplayName, member.UserName), itemDtos);
+        return new MemberWishlistDto(memberId, ApplicationUser.ToAlias(member.DisplayName, member.UserName), itemDtos);
     }
 
     public async Task<ServiceResult> ReserveAsync(string currentUserId, int itemId, CancellationToken cancellationToken = default)
@@ -153,7 +153,4 @@ public sealed class FamilyWishlistService(IDbContextFactory<ApplicationDbContext
         _ when reservedById == currentUserId => ReservationStatus.ReservedByMe,
         _ => ReservationStatus.ReservedByOther
     };
-
-    private static string ToAlias(string? displayName, string? userName) =>
-        string.IsNullOrWhiteSpace(displayName) ? userName ?? string.Empty : displayName;
 }

@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+using eSanta.Common;
 using eSanta.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -7,11 +7,12 @@ namespace eSanta.Features.Registration;
 
 public sealed class RegistrationService(
     UserManager<ApplicationUser> userManager,
-    ApplicationDbContext dbContext) : IRegistrationService
+    ApplicationDbContext dbContext,
+    IModelValidator modelValidator) : IRegistrationService
 {
     public async Task<RegistrationResult> RegisterAsync(RegistrationModel model, CancellationToken cancellationToken = default)
     {
-        var validationErrors = Validate(model);
+        var validationErrors = modelValidator.Validate(model);
         if (validationErrors.Count > 0)
         {
             return RegistrationResult.Failure(validationErrors);
@@ -46,16 +47,5 @@ public sealed class RegistrationService(
             Name = familyName.Trim(),
             NormalizedName = normalizedName
         };
-    }
-
-    private static List<string> Validate(RegistrationModel model)
-    {
-        var results = new List<ValidationResult>();
-        Validator.TryValidateObject(model, new ValidationContext(model), results, validateAllProperties: true);
-
-        return results
-            .Select(result => result.ErrorMessage)
-            .OfType<string>()
-            .ToList();
     }
 }

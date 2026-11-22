@@ -1,3 +1,4 @@
+using eSanta.Common;
 using eSanta.Data;
 using eSanta.Features.ShoppingList;
 using eSanta.Tests.Infrastructure;
@@ -18,7 +19,7 @@ public class ShoppingListServiceTests
 
     public ShoppingListServiceTests()
     {
-        _service = new ShoppingListService(_dbContextFactory);
+        _service = new ShoppingListService(_dbContextFactory, new DataAnnotationsModelValidator());
 
         using var dbContext = _dbContextFactory.CreateDbContext();
         dbContext.Users.AddRange(
@@ -67,6 +68,27 @@ public class ShoppingListServiceTests
         row.RecipientName.ShouldBe("Zofia");
         row.IsReserved.ShouldBeTrue();
         row.GiftName.ShouldBe("Perfumy");
+    }
+
+    [Fact]
+    public async Task GetAsync_OnlyRegisteredMembersOfMyFamilyHaveLetterLink()
+    {
+        await SeedAsync(dbContext =>
+        {
+            var family = new Family { Name = "Kowalscy", NormalizedName = "KOWALSCY" };
+            var otherFamily = new Family { Name = "Nowakowie", NormalizedName = "NOWAKOWIE" };
+            dbContext.Families.AddRange(family, otherFamily);
+            dbContext.Users.Find(Me)!.Family = family;
+            dbContext.Users.Find(Jan)!.Family = family;
+            dbContext.Users.Find(Zofia)!.Family = otherFamily;
+            dbContext.Attendees.Add(new Attendee { Id = 4, FullName = "Zofia", UserId = Zofia });
+        });
+
+        var rows = await _service.GetAsync(Me);
+
+        rows.Single(row => row.Recipient.UserId == Jan).HasLetter.ShouldBeTrue();
+        rows.Single(row => row.Recipient.UserId == Zofia).HasLetter.ShouldBeFalse();
+        rows.Single(row => row.Recipient.AttendeeId == 3).HasLetter.ShouldBeFalse();
     }
 
     [Fact]

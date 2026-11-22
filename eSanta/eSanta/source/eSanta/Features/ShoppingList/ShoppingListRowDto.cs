@@ -6,7 +6,8 @@ public sealed record ShoppingListRowDto(
     string? ReservedGiftNames,
     string? ManualGiftName,
     bool IsBought,
-    string? Note)
+    string? Note,
+    bool HasLetter = false)
 {
     public bool IsReserved => ReservedGiftNames is not null;
 

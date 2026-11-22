@@ -138,6 +138,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xBY2NvdW50XFNoYXJlZFxTdGF0dXNNZXNzYWdlLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Users/lenar/source/repos/eSantaProject/eSanta/eSanta/source/eSanta/Components/Admin/SetPasswordDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xBZG1pblxTZXRQYXNzd29yZERpYWxvZy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Users/lenar/source/repos/eSantaProject/eSanta/eSanta/source/eSanta/Components/App.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xBcHAucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
@@ -152,6 +156,10 @@ build_metadata.AdditionalFiles.CssScope =
 
 [C:/Users/lenar/source/repos/eSantaProject/eSanta/eSanta/source/eSanta/Components/Layout/NavMenu.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMYXlvdXRcTmF2TWVudS5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/lenar/source/repos/eSantaProject/eSanta/eSanta/source/eSanta/Components/Pages/AdminPanel.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xBZG1pblBhbmVsLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/lenar/source/repos/eSantaProject/eSanta/eSanta/source/eSanta/Components/Pages/Attendance.razor]
@@ -184,6 +192,14 @@ build_metadata.AdditionalFiles.CssScope =
 
 [C:/Users/lenar/source/repos/eSantaProject/eSanta/eSanta/source/eSanta/Components/Routes.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xSb3V0ZXMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/lenar/source/repos/eSantaProject/eSanta/eSanta/source/eSanta/Components/Shared/FormDialogLayout.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTaGFyZWRcRm9ybURpYWxvZ0xheW91dC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/lenar/source/repos/eSantaProject/eSanta/eSanta/source/eSanta/Components/Shared/GiftLink.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTaGFyZWRcR2lmdExpbmsucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/lenar/source/repos/eSantaProject/eSanta/eSanta/source/eSanta/Components/Shopping/ShoppingEntryDialog.razor]

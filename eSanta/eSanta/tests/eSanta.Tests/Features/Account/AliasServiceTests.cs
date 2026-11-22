@@ -1,3 +1,4 @@
+using eSanta.Common;
 using eSanta.Data;
 using eSanta.Features.Account;
 using Microsoft.AspNetCore.Identity;
@@ -20,6 +21,7 @@ public sealed class AliasServiceTests : IDisposable
         services.AddIdentityCore<ApplicationUser>(options => options.User.AllowedUserNameCharacters = string.Empty)
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddClaimsPrincipalFactory<AliasClaimsPrincipalFactory>();
+        services.AddSingleton<IModelValidator, DataAnnotationsModelValidator>();
         services.AddScoped<IAliasService, AliasService>();
 
         _serviceProvider = services.BuildServiceProvider();

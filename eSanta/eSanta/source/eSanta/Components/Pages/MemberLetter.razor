@@ -1,14 +1,13 @@
 @page "/others-letters/{MemberId}"
 
-@using System.Security.Claims
 @using Microsoft.AspNetCore.Authorization
-@using eSanta.Common
 @using eSanta.Features.FamilyWishlists
 
 @attribute [Authorize]
 
 @inject IFamilyWishlistService FamilyWishlistService
-@inject ISnackbar Snackbar
+@inject ICurrentUser CurrentUser
+@inject IOperationFeedback OperationFeedback
 
 <PageTitle>@(_wishlist is null ? "List do św. Mikołaja" : $"List: {_wishlist.Alias}")</PageTitle>
 
@@ -48,18 +47,7 @@ else
         <RowTemplate>
             <MudTd DataLabel="Nazwa"><strong>@context.Name</strong></MudTd>
             <MudTd DataLabel="Opis" Style="white-space:pre-line">@context.Description</MudTd>
-            <MudTd DataLabel="Link">
-                @if (context.Link is not null)
-                {
-                    <MudLink Href="@context.Link" Target="_blank" rel="noopener noreferrer" Color="Color.Secondary">
-                        <MudIcon Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" Class="mr-1" Style="vertical-align:middle" />Otwórz
-                    </MudLink>
-                }
-                else
-                {
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">—</MudText>
-                }
-            </MudTd>
+            <MudTd DataLabel="Link"><GiftLink Href="@context.Link" /></MudTd>
             <MudTd DataLabel="Rezerwacja" Style="text-align:right">
                 @switch (context.Status)
                 {
@@ -101,9 +89,6 @@ else
     [Parameter]
     public string MemberId { get; set; } = string.Empty;
 
-    [CascadingParameter]
-    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
-
     private string? _currentUserId;
     private MemberWishlistDto? _wishlist;
     private bool _isLoaded;
@@ -112,7 +97,7 @@ else
 
     protected override async Task OnParametersSetAsync()
     {
-        _currentUserId ??= (await AuthenticationState).User.FindFirstValue(ClaimTypes.NameIdentifier);
+        _currentUserId ??= await CurrentUser.GetIdAsync();
         if (_currentUserId is null)
         {
             _error = "Nie udało się ustalić zalogowanego użytkownika. Zaloguj się ponownie.";
@@ -151,19 +136,7 @@ else
 
         try
         {
-            var result = await operation();
-            if (result.Succeeded)
-            {
-                Snackbar.Add(successMessage, Severity.Success);
-            }
-            else
-            {
-                Snackbar.Add(result.Error ?? "Operacja nie powiodła się.", Severity.Error);
-            }
-        }
-        catch (Exception)
-        {
-            Snackbar.Add("Nie udało się zapisać zmian. Spróbuj ponownie.", Severity.Error);
+            await OperationFeedback.ExecuteAsync(operation, successMessage);
         }
         finally
         {

@@ -1,3 +1,4 @@
+using eSanta.Common;
 using eSanta.Data;
 using eSanta.Features.Registration;
 using Microsoft.AspNetCore.Identity;
@@ -22,6 +23,7 @@ public sealed class RegistrationServiceTests : IDisposable
         services.AddIdentityCore<ApplicationUser>(options => options.User.AllowedUserNameCharacters = string.Empty)
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddErrorDescriber<PolishIdentityErrorDescriber>();
+        services.AddSingleton<IModelValidator, DataAnnotationsModelValidator>();
         services.AddScoped<IRegistrationService, RegistrationService>();
 
         _serviceProvider = services.BuildServiceProvider();
