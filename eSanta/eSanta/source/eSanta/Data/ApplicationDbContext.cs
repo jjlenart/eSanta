@@ -14,6 +14,10 @@ namespace eSanta.Data
 
         public DbSet<ShoppingListEntry> ShoppingListEntries => Set<ShoppingListEntry>();
 
+        public DbSet<ShoutboxMessage> ShoutboxMessages => Set<ShoutboxMessage>();
+
+        public DbSet<ShoutboxMention> ShoutboxMentions => Set<ShoutboxMention>();
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -23,6 +27,8 @@ namespace eSanta.Data
             builder.ApplyConfiguration(new ApplicationUserConfiguration());
             builder.ApplyConfiguration(new WishlistItemConfiguration());
             builder.ApplyConfiguration(new ShoppingListEntryConfiguration());
+            builder.ApplyConfiguration(new ShoutboxMessageConfiguration());
+            builder.ApplyConfiguration(new ShoutboxMentionConfiguration());
         }
     }
 }

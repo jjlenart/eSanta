@@ -1,0 +1,277 @@
+@using eSanta.Data
+@using eSanta.Features.Shoutbox
+
+@implements IDisposable
+
+@inject IShoutboxService ShoutboxService
+@inject IShoutboxNotifier ShoutboxNotifier
+@inject IMentionSuggester MentionSuggester
+@inject ICurrentUser CurrentUser
+@inject IOperationFeedback OperationFeedback
+
+<div class="@(FullPage ? "shoutbox shoutbox--page" : "shoutbox")">
+    @if (FullPage)
+    {
+        <MudText Typo="Typo.h4" HtmlTag="h1" Class="shoutbox-header mb-2">Pogadajmy</MudText>
+    }
+    else
+    {
+        <MudText Typo="Typo.h6" Class="shoutbox-header px-4 pt-4 pb-2">
+            <MudIcon Icon="@Icons.Material.Filled.Forum" Size="Size.Small" Class="mr-1" Style="vertical-align:middle" />
+            Pogadajmy
+        </MudText>
+    }
+
+    @if (_loadError is not null)
+    {
+        <MudAlert Severity="Severity.Error" Dense="true" Class="@SectionPadding">@_loadError</MudAlert>
+    }
+    else if (_feed is null)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+    }
+    else if (!_feed.HasFamily)
+    {
+        <MudAlert Severity="Severity.Info" Dense="true" Class="@SectionPadding">Twoje konto nie jest przypisane do żadnej rodziny, więc czat „Pogadajmy” jest niedostępny.</MudAlert>
+    }
+    else
+    {
+        <EditForm Model="_model" OnValidSubmit="SendAsync" class="@($"shoutbox-form pb-2 {SectionPadding}")">
+            <DataAnnotationsValidator />
+            <MudStack Row="true" AlignItems="AlignItems.Start" Spacing="1">
+                <MudTextField @ref="_input"
+                              @bind-Value="_model.Content"
+                              @bind-Value:after="UpdateSuggestions"
+                              For="@(() => _model.Content)"
+                              Label="Wiadomość"
+                              HelperText="Wpisz @@, aby kogoś oznaczyć"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              MaxLength="ShoutboxMessage.ContentMaxLength"
+                              Counter="ShoutboxMessage.ContentMaxLength"
+                              Immediate="true"
+                              Disabled="_isSending"
+                              Class="flex-grow-1" />
+                <MudIconButton ButtonType="ButtonType.Submit"
+                               Icon="@Icons.Material.Filled.Send"
+                               Color="Color.Primary"
+                               Disabled="_isSending"
+                               aria-label="Wyślij wiadomość"
+                               Class="mt-1" />
+            </MudStack>
+
+            @if (_suggestions.Count > 0)
+            {
+                <MudPaper Elevation="3" Class="shoutbox-suggestions">
+                    <MudList T="string" Dense="true">
+                        @foreach (var alias in _suggestions)
+                        {
+                            <MudListItem T="string"
+                                         Icon="@Icons.Material.Filled.AlternateEmail"
+                                         OnClick="@(() => ChooseSuggestionAsync(alias))">
+                                @alias
+                            </MudListItem>
+                        }
+                    </MudList>
+                </MudPaper>
+            }
+
+            <MudSwitch T="bool"
+                       @bind-Value="_model.IsAnonymous"
+                       Label="Anonimowo"
+                       Color="Color.Primary"
+                       Size="Size.Small"
+                       Disabled="_isSending" />
+        </EditForm>
+
+        <div class="@($"shoutbox-messages pb-4 {SectionPadding}")">
+            @if (_messages.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Nikt jeszcze nic nie napisał. Bądź pierwszy!</MudText>
+            }
+
+            @for (var index = _messages.Count - 1; index >= 0; index--)
+            {
+                var message = _messages[index];
+                <div class="@(message.MentionsMe ? "shoutbox-message shoutbox-message--mention" : "shoutbox-message")" @key="message.Id">
+                    <div class="shoutbox-meta">
+                        @if (message.IsAnonymous)
+                        {
+                            <strong class="shoutbox-anonymous">Anonim@(message.IsMine ? " (Ty)" : null)</strong>
+                        }
+                        else
+                        {
+                            <strong>@message.AuthorName</strong>
+                        }
+                        <span>
+                            @if (message.MentionsMe)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.AlternateEmail" Size="Size.Small" Class="shoutbox-mention-icon" aria-label="Oznaczono Cię" />
+                            }
+                            @FormatDate(message.SentAt)
+                        </span>
+                    </div>
+                    <div class="shoutbox-content">@message.Content</div>
+                </div>
+            }
+
+            @if (_hasOlder)
+            {
+                <MudButton Variant="Variant.Text"
+                           Size="Size.Small"
+                           FullWidth="true"
+                           StartIcon="@Icons.Material.Filled.History"
+                           Disabled="_isLoadingOlder"
+                           OnClick="LoadOlderAsync">
+                    Wczytaj starsze
+                </MudButton>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private static readonly TimeZoneInfo DisplayTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Europe/Warsaw");
+
+    /// <summary>True when the panel fills a whole page instead of the side drawer.</summary>
+    [Parameter]
+    public bool FullPage { get; set; }
+
+    private readonly List<ShoutboxMessageDto> _messages = [];
+    private readonly HashSet<long> _messageIds = [];
+    private ShoutboxMessageFormModel _model = new();
+    private MudTextField<string?>? _input;
+    private IReadOnlyList<string> _suggestions = [];
+    private string? _userId;
+    private ShoutboxFeed? _feed;
+    private string? _loadError;
+    private bool _hasOlder;
+    private bool _isSending;
+    private bool _isLoadingOlder;
+    private IDisposable? _subscription;
+    private bool _disposed;
+
+    private string SectionPadding => FullPage ? string.Empty : "px-4";
+
+    protected override async Task OnInitializedAsync()
+    {
+        _userId = await CurrentUser.GetIdAsync();
+        if (_userId is null)
+        {
+            _loadError = "Nie udało się ustalić zalogowanego użytkownika.";
+            return;
+        }
+
+        try
+        {
+            _feed = await ShoutboxService.GetLatestAsync(_userId);
+        }
+        catch (Exception)
+        {
+            _loadError = "Nie udało się wczytać wiadomości. Odśwież stronę.";
+            return;
+        }
+
+        Append(_feed.Page.Messages);
+        _hasOlder = _feed.Page.HasOlder;
+
+        if (_feed.FamilyId is { } familyId && !_disposed)
+        {
+            _subscription = ShoutboxNotifier.Subscribe(familyId, OnMessagePostedAsync);
+        }
+    }
+
+    private void UpdateSuggestions() =>
+        _suggestions = MentionSuggester.Suggest(_model.Content, _feed?.MentionableAliases ?? []);
+
+    private async Task ChooseSuggestionAsync(string alias)
+    {
+        _model.Content = MentionSuggester.Complete(_model.Content, alias);
+        _suggestions = [];
+
+        if (_input is not null)
+        {
+            await _input.FocusAsync();
+        }
+    }
+
+    private async Task SendAsync()
+    {
+        _isSending = true;
+        _suggestions = [];
+        try
+        {
+            var model = _model;
+            if (await OperationFeedback.ExecuteAsync(() => ShoutboxService.SendAsync(_userId!, model)))
+            {
+                _model = new ShoutboxMessageFormModel { IsAnonymous = model.IsAnonymous };
+                await LoadNewerAsync();
+            }
+        }
+        finally
+        {
+            _isSending = false;
+        }
+    }
+
+    private async Task LoadOlderAsync()
+    {
+        if (_messages.Count == 0)
+        {
+            return;
+        }
+
+        _isLoadingOlder = true;
+        try
+        {
+            var page = await ShoutboxService.GetOlderAsync(_userId!, _messages[0].Id);
+            _messages.InsertRange(0, page.Messages.Where(message => _messageIds.Add(message.Id)));
+            _hasOlder = page.HasOlder;
+        }
+        catch (Exception)
+        {
+            _loadError = "Nie udało się wczytać starszych wiadomości. Odśwież stronę.";
+        }
+        finally
+        {
+            _isLoadingOlder = false;
+        }
+    }
+
+    private async Task LoadNewerAsync()
+    {
+        var lastId = _messages.Count > 0 ? _messages[^1].Id : 0;
+        try
+        {
+            Append(await ShoutboxService.GetNewerAsync(_userId!, lastId));
+        }
+        catch (Exception)
+        {
+            _loadError = "Nie udało się wczytać nowych wiadomości. Odśwież stronę.";
+        }
+    }
+
+    private Task OnMessagePostedAsync() =>
+        InvokeAsync(async () =>
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            await LoadNewerAsync();
+            StateHasChanged();
+        });
+
+    private void Append(IEnumerable<ShoutboxMessageDto> messages) =>
+        _messages.AddRange(messages.Where(message => _messageIds.Add(message.Id)));
+
+    private static string FormatDate(DateTimeOffset sentAt) =>
+        TimeZoneInfo.ConvertTime(sentAt, DisplayTimeZone).ToString("dd.MM.yyyy HH:mm");
+
+    public void Dispose()
+    {
+        _disposed = true;
+        _subscription?.Dispose();
+    }
+}

@@ -9,6 +9,7 @@ using eSanta.Features.Attendance;
 using eSanta.Features.FamilyWishlists;
 using eSanta.Features.Registration;
 using eSanta.Features.ShoppingList;
+using eSanta.Features.Shoutbox;
 using eSanta.Features.Wishlist;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -52,6 +53,11 @@ builder.Services.AddScoped<IWishlistService, WishlistService>();
 builder.Services.AddScoped<IFamilyWishlistService, FamilyWishlistService>();
 builder.Services.AddScoped<IShoppingListService, ShoppingListService>();
 builder.Services.AddScoped<IUserAdministrationService, UserAdministrationService>();
+builder.Services.AddScoped<IShoutboxService, ShoutboxService>();
+builder.Services.AddSingleton<IShoutboxNotifier, ShoutboxNotifier>();
+builder.Services.AddSingleton<IMentionParser, MentionParser>();
+builder.Services.AddSingleton<IMentionSuggester, MentionSuggester>();
+builder.Services.AddSingleton(TimeProvider.System);
 
 builder.Services.AddScoped<IAuthorizationHandler, AdminAuthorizationHandler>();
 builder.Services.AddAuthorizationBuilder()

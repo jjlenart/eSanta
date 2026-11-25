@@ -15,7 +15,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("eSanta")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+129bd974b49256b060bbbb23ce8ac17abe8a95a0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+210b3f8d31bc01126f19b36bd83af45c39ea4358")]
 [assembly: System.Reflection.AssemblyProductAttribute("eSanta")]
 [assembly: System.Reflection.AssemblyTitleAttribute("eSanta")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

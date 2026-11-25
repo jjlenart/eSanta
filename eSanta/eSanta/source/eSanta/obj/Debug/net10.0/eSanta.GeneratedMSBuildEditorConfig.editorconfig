@@ -166,6 +166,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xBdHRlbmRhbmNlLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Users/lenar/source/repos/eSantaProject/eSanta/eSanta/source/eSanta/Components/Pages/Chat.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xDaGF0LnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Users/lenar/source/repos/eSantaProject/eSanta/eSanta/source/eSanta/Components/Pages/Error.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xFcnJvci5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
@@ -204,6 +208,10 @@ build_metadata.AdditionalFiles.CssScope =
 
 [C:/Users/lenar/source/repos/eSantaProject/eSanta/eSanta/source/eSanta/Components/Shopping/ShoppingEntryDialog.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTaG9wcGluZ1xTaG9wcGluZ0VudHJ5RGlhbG9nLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/lenar/source/repos/eSantaProject/eSanta/eSanta/source/eSanta/Components/Shoutbox/ShoutboxPanel.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTaG91dGJveFxTaG91dGJveFBhbmVsLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/lenar/source/repos/eSantaProject/eSanta/eSanta/source/eSanta/Components/Wishlist/WishlistItemDialog.razor]

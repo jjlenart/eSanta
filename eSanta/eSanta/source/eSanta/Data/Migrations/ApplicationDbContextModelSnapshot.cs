@@ -364,6 +364,56 @@ namespace eSanta.Data.Migrations
                     b.ToTable("ShoppingListEntries", (string)null);
                 });
 
+            modelBuilder.Entity("eSanta.Data.ShoutboxMention", b =>
+                {
+                    b.Property<long>("MessageId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("text");
+
+                    b.HasKey("MessageId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("ShoutboxMentions", (string)null);
+                });
+
+            modelBuilder.Entity("eSanta.Data.ShoutboxMessage", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("AuthorId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("FamilyId")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsAnonymous")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset>("SentAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthorId");
+
+                    b.HasIndex("FamilyId", "Id");
+
+                    b.ToTable("ShoutboxMessages", (string)null);
+                });
+
             modelBuilder.Entity("eSanta.Data.WishlistItem", b =>
                 {
                     b.Property<int>("Id")
@@ -556,6 +606,44 @@ namespace eSanta.Data.Migrations
                     b.Navigation("RecipientUser");
                 });
 
+            modelBuilder.Entity("eSanta.Data.ShoutboxMention", b =>
+                {
+                    b.HasOne("eSanta.Data.ShoutboxMessage", "Message")
+                        .WithMany("Mentions")
+                        .HasForeignKey("MessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("eSanta.Data.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Message");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("eSanta.Data.ShoutboxMessage", b =>
+                {
+                    b.HasOne("eSanta.Data.ApplicationUser", "Author")
+                        .WithMany()
+                        .HasForeignKey("AuthorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("eSanta.Data.Family", "Family")
+                        .WithMany()
+                        .HasForeignKey("FamilyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Author");
+
+                    b.Navigation("Family");
+                });
+
             modelBuilder.Entity("eSanta.Data.WishlistItem", b =>
                 {
                     b.HasOne("eSanta.Data.ApplicationUser", "Owner")
@@ -577,6 +665,11 @@ namespace eSanta.Data.Migrations
             modelBuilder.Entity("eSanta.Data.Family", b =>
                 {
                     b.Navigation("Members");
+                });
+
+            modelBuilder.Entity("eSanta.Data.ShoutboxMessage", b =>
+                {
+                    b.Navigation("Mentions");
                 });
 #pragma warning restore 612, 618
         }

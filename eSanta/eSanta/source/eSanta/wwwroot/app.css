@@ -156,3 +156,77 @@ h1:focus {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+
+/* The drawer is fixed-height, so only the message list scrolls while the header and input stay on top. */
+.shoutbox {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+
+    .shoutbox > .shoutbox-header,
+    .shoutbox > .shoutbox-form,
+    .shoutbox > .mud-alert {
+        flex: 0 0 auto;
+    }
+
+.shoutbox-messages {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+/* Full page: viewport minus the app bar and the vertical padding of the content container (py-6). */
+.shoutbox--page {
+    height: calc(100dvh - var(--mud-appbar-height) - 48px);
+    min-height: 320px;
+}
+
+.shoutbox-suggestions {
+    margin-right: 44px;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.shoutbox-message--mention {
+    background-color: #FFF4D6;
+    border-left: 4px solid var(--mud-palette-tertiary);
+    border-radius: 4px;
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+.shoutbox-meta strong.shoutbox-anonymous {
+    font-style: italic;
+    color: var(--mud-palette-text-secondary);
+}
+
+.shoutbox-mention-icon {
+    vertical-align: middle;
+    color: var(--mud-palette-tertiary);
+    margin-right: 2px;
+}
+
+.shoutbox-message {
+    padding: 6px 0;
+    border-bottom: 1px solid var(--mud-palette-divider);
+}
+
+.shoutbox-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 0.75rem;
+    color: var(--mud-palette-text-secondary);
+}
+
+    .shoutbox-meta strong {
+        color: var(--mud-palette-primary);
+    }
+
+.shoutbox-content {
+    font-size: 0.875rem;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}

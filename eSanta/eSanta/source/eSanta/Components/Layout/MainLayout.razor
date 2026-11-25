@@ -1,4 +1,9 @@
 ﻿@inherits LayoutComponentBase
+@implements IDisposable
+
+@using eSanta.Components.Shoutbox
+
+@inject NavigationManager NavigationManager
 
 <MudThemeProvider Theme="_theme" />
 <MudPopoverProvider />
@@ -25,6 +30,16 @@
         </MudLink>
         <MudSpacer />
         <AuthorizeView>
+            <Authorized>
+                @if (ShowSideShoutbox)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Forum"
+                                   Color="Color.Inherit"
+                                   Edge="Edge.End"
+                                   aria-label="Przełącz czat Pogadajmy"
+                                   OnClick="ToggleShoutbox" />
+                }
+            </Authorized>
             <NotAuthorized>
                 <MudButton Href="Account/Login" Color="Color.Inherit" Variant="Variant.Text">Zaloguj się</MudButton>
                 <MudButton Href="Account/Register" Color="Color.Inherit" Variant="Variant.Outlined" Class="ml-2">Zarejestruj się</MudButton>
@@ -38,6 +53,24 @@
                Elevation="2">
         <NavMenu />
     </MudDrawer>
+
+    @* The shoutbox needs an interactive circuit, so it is hidden on statically rendered pages (e.g. account management)
+       and on the chat page, which shows it full screen. *@
+    <AuthorizeView>
+        <Authorized>
+            @if (ShowSideShoutbox)
+            {
+                <MudDrawer @bind-Open="_shoutboxOpen"
+                           Anchor="Anchor.End"
+                           Variant="DrawerVariant.Responsive"
+                           ClipMode="DrawerClipMode.Always"
+                           Width="320px"
+                           Elevation="2">
+                    <ShoutboxPanel />
+                </MudDrawer>
+            }
+        </Authorized>
+    </AuthorizeView>
 
     <MudMainContent>
         <MudContainer MaxWidth="MaxWidth.Large" Class="py-6 festive-content">
@@ -86,5 +119,36 @@
 
     private bool _drawerOpen = true;
 
+    private bool _shoutboxOpen = true;
+    private bool _isChatPage;
+
+    private bool ShowSideShoutbox => RendererInfo.IsInteractive && !_isChatPage;
+
+    protected override void OnInitialized()
+    {
+        _isChatPage = IsChatPage(NavigationManager.Uri);
+        NavigationManager.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        var isChatPage = IsChatPage(e.Location);
+        if (isChatPage != _isChatPage)
+        {
+            _isChatPage = isChatPage;
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private bool IsChatPage(string uri)
+    {
+        var path = NavigationManager.ToBaseRelativePath(uri).Split('?', '#')[0].TrimEnd('/');
+        return string.Equals(path, Pages.Chat.Route, StringComparison.OrdinalIgnoreCase);
+    }
+
     private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
+
+    private void ToggleShoutbox() => _shoutboxOpen = !_shoutboxOpen;
+
+    public void Dispose() => NavigationManager.LocationChanged -= OnLocationChanged;
 }

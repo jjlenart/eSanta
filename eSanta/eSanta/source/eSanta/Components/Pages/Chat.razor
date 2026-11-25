@@ -1,0 +1,15 @@
+@page "/chat"
+
+@using Microsoft.AspNetCore.Authorization
+@using eSanta.Components.Shoutbox
+
+@attribute [Authorize]
+
+<PageTitle>Pogadajmy</PageTitle>
+
+<ShoutboxPanel FullPage="true" />
+
+@code {
+    /// <summary>Must match the @page directive; the layout hides the side shoutbox on this route.</summary>
+    public const string Route = "chat";
+}

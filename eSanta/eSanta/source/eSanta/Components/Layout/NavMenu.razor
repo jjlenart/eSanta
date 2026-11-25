@@ -12,6 +12,7 @@
             <MudNavLink Href="my-letter" Icon="@Icons.Material.Filled.Mail">Mój list do św. Mikołaja</MudNavLink>
             <MudNavLink Href="others-letters" Icon="@Icons.Material.Filled.MarkEmailRead">Listy innych osób</MudNavLink>
             <MudNavLink Href="shopping-list" Icon="@Icons.Material.Filled.ShoppingCart">Moja lista zakupowa</MudNavLink>
+            <MudNavLink Href="@Pages.Chat.Route" Icon="@Icons.Material.Filled.Forum">Pogadajmy</MudNavLink>
             <AuthorizeView Policy="@AdminRequirement.PolicyName" Context="adminContext">
                 <MudNavLink Href="admin" Icon="@Icons.Material.Filled.AdminPanelSettings">Panel administratora</MudNavLink>
             </AuthorizeView>
