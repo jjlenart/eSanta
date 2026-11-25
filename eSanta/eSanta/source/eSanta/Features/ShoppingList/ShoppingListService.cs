@@ -10,13 +10,26 @@ public sealed class ShoppingListService(
 {
     private const string RecipientNotFoundError = "Nie znaleziono tej osoby. Mogła zostać usunięta z listy obecności.";
     private const string RecipientNameRequiredError = "Podaj imię osoby, dla której kupujesz prezent.";
+    private const string NoFamilyError = "Twoje konto nie jest przypisane do żadnej rodziny, więc nie możesz korzystać z listy zakupowej.";
 
-    public async Task<IReadOnlyList<ShoppingListRowDto>> GetAsync(string ownerId, CancellationToken cancellationToken = default)
+    public async Task<ShoppingListResult> GetAsync(string ownerId, CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
 
+        var family = await dbContext.Users
+            .AsNoTracking()
+            .Where(user => user.Id == ownerId && user.Family != null)
+            .Select(user => new { user.Family!.Id, user.Family.Name })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (family is null)
+        {
+            return ShoppingListResult.NoFamily();
+        }
+
         var attendees = await dbContext.Attendees
             .AsNoTracking()
+            .Where(Attendee.BelongsToFamily(family.Id))
             .Where(attendee => attendee.UserId != ownerId)
             .Select(attendee => new
             {
@@ -30,7 +43,7 @@ public sealed class ShoppingListService(
 
         var reservations = await dbContext.WishlistItems
             .AsNoTracking()
-            .Where(item => item.ReservedById == ownerId && item.OwnerId != ownerId)
+            .Where(item => item.ReservedById == ownerId && item.OwnerId != ownerId && item.Owner!.FamilyId == family.Id)
             .OrderBy(item => item.Id)
             .Select(item => new { item.OwnerId, item.Name, item.Owner!.DisplayName, item.Owner.UserName })
             .ToListAsync(cancellationToken);
@@ -39,19 +52,6 @@ public sealed class ShoppingListService(
             .AsNoTracking()
             .Where(entry => entry.OwnerId == ownerId)
             .ToListAsync(cancellationToken);
-
-        var ownerFamilyId = await dbContext.Users
-            .Where(user => user.Id == ownerId)
-            .Select(user => user.FamilyId)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        HashSet<string> familyMemberIds = ownerFamilyId is null
-            ? []
-            : (await dbContext.Users
-                .Where(user => user.FamilyId == ownerFamilyId && user.Id != ownerId)
-                .Select(user => user.Id)
-                .ToListAsync(cancellationToken))
-                .ToHashSet();
 
         var registeredRecipients = attendees
             .Where(attendee => attendee.UserId is not null)
@@ -70,7 +70,7 @@ public sealed class ShoppingListService(
                 .ToList();
 
             rows.Add(CreateRow(ShoppingRecipient.ForUser(recipient.UserId), recipient.Name, entry, reservedNames)
-                with { HasLetter = familyMemberIds.Contains(recipient.UserId) });
+                with { HasLetter = true });
         }
 
         foreach (var attendee in attendees.Where(attendee => attendee.UserId is null))
@@ -86,7 +86,7 @@ public sealed class ShoppingListService(
             .Select(entry => CreateRow(ShoppingRecipient.ForCustomEntry(entry.Id), entry.RecipientName, entry, []))
             .OrderBy(row => row.RecipientName, StringComparer.CurrentCultureIgnoreCase);
 
-        return listedRows.Concat(customRows).ToList();
+        return new ShoppingListResult(family.Name, listedRows.Concat(customRows).ToList());
     }
 
     public async Task<ServiceResult> SaveAsync(string ownerId, ShoppingRecipient recipient, ShoppingEntryFormModel model, CancellationToken cancellationToken = default)
@@ -98,6 +98,11 @@ public sealed class ShoppingListService(
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+
+        if (await GetFamilyIdAsync(dbContext, ownerId, cancellationToken) is not { } familyId)
+        {
+            return ServiceResult.Failure(NoFamilyError);
+        }
 
         ShoppingListEntry? entry;
         if (recipient.CustomEntryId is { } entryId)
@@ -117,7 +122,7 @@ public sealed class ShoppingListService(
         }
         else if (recipient.UserId is { } recipientUserId)
         {
-            var recipientName = await FindRegisteredRecipientNameAsync(dbContext, ownerId, recipientUserId, cancellationToken);
+            var recipientName = await FindRegisteredRecipientNameAsync(dbContext, ownerId, familyId, recipientUserId, cancellationToken);
             if (recipientName is null)
             {
                 return ServiceResult.Failure(RecipientNotFoundError);
@@ -132,7 +137,7 @@ public sealed class ShoppingListService(
         {
             var attendeeName = await dbContext.Attendees
                 .AsNoTracking()
-                .Where(attendee => attendee.Id == attendeeId && attendee.UserId == null)
+                .Where(attendee => attendee.Id == attendeeId && attendee.UserId == null && attendee.FamilyId == familyId)
                 .Select(attendee => attendee.FullName)
                 .FirstOrDefaultAsync(cancellationToken);
             if (attendeeName is null)
@@ -170,6 +175,11 @@ public sealed class ShoppingListService(
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
 
+        if (await GetFamilyIdAsync(dbContext, ownerId, cancellationToken) is null)
+        {
+            return ServiceResult.Failure(NoFamilyError);
+        }
+
         var entry = AddEntry(dbContext, new ShoppingListEntry { OwnerId = ownerId, RecipientName = model.RecipientName.Trim() });
         Apply(model, entry);
 
@@ -192,30 +202,36 @@ public sealed class ShoppingListService(
     }
 
     /// <summary>
-    /// A registered user can be a recipient when they are on the attendance list or when the owner reserved one of their gifts.
+    /// A registered user from the owner's family can be a recipient when they are on the attendance list or when the owner reserved one of their gifts.
     /// </summary>
-    private static async Task<string?> FindRegisteredRecipientNameAsync(ApplicationDbContext dbContext, string ownerId, string recipientUserId, CancellationToken cancellationToken)
+    private static async Task<string?> FindRegisteredRecipientNameAsync(ApplicationDbContext dbContext, string ownerId, int familyId, string recipientUserId, CancellationToken cancellationToken)
     {
         if (recipientUserId == ownerId)
         {
             return null;
         }
 
-        var isListed = await dbContext.Attendees.AnyAsync(attendee => attendee.UserId == recipientUserId, cancellationToken)
-            || await dbContext.WishlistItems.AnyAsync(item => item.OwnerId == recipientUserId && item.ReservedById == ownerId, cancellationToken);
-        if (!isListed)
+        var user = await dbContext.Users
+            .AsNoTracking()
+            .Where(user => user.Id == recipientUserId && user.FamilyId == familyId)
+            .Select(user => new { user.DisplayName, user.UserName })
+            .FirstOrDefaultAsync(cancellationToken);
+        if (user is null)
         {
             return null;
         }
 
-        var user = await dbContext.Users
-            .AsNoTracking()
-            .Where(user => user.Id == recipientUserId)
-            .Select(user => new { user.DisplayName, user.UserName })
-            .FirstOrDefaultAsync(cancellationToken);
+        var isListed = await dbContext.Attendees.AnyAsync(attendee => attendee.UserId == recipientUserId, cancellationToken)
+            || await dbContext.WishlistItems.AnyAsync(item => item.OwnerId == recipientUserId && item.ReservedById == ownerId, cancellationToken);
 
-        return user is null ? null : Truncate(ApplicationUser.ToAlias(user.DisplayName, user.UserName, "?"), ShoppingListEntry.RecipientNameMaxLength);
+        return isListed ? Truncate(ApplicationUser.ToAlias(user.DisplayName, user.UserName, "?"), ShoppingListEntry.RecipientNameMaxLength) : null;
     }
+
+    private static Task<int?> GetFamilyIdAsync(ApplicationDbContext dbContext, string userId, CancellationToken cancellationToken) =>
+        dbContext.Users
+            .Where(user => user.Id == userId)
+            .Select(user => user.FamilyId)
+            .FirstOrDefaultAsync(cancellationToken);
 
     private static Task<ShoppingListEntry?> FindCustomEntryAsync(ApplicationDbContext dbContext, string ownerId, int entryId, CancellationToken cancellationToken) =>
         dbContext.ShoppingListEntries.FirstOrDefaultAsync(

@@ -24,5 +24,12 @@ public class AttendeeConfiguration : IEntityTypeConfiguration<Attendee>
 
         builder.HasIndex(attendee => attendee.UserId)
             .IsUnique();
+
+        builder.HasOne(attendee => attendee.Family)
+            .WithMany()
+            .HasForeignKey(attendee => attendee.FamilyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(attendee => attendee.FamilyId);
     }
 }

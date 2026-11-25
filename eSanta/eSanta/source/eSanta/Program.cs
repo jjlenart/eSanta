@@ -37,6 +37,7 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+builder.Services.AddHostedService<DatabaseMigrationService>();
 
 builder.Services.AddMudServices();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();

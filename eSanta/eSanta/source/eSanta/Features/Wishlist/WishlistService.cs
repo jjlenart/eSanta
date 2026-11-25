@@ -97,7 +97,7 @@ public sealed class WishlistService(
     private static void Apply(WishlistItemFormModel model, WishlistItem item)
     {
         item.Name = model.Name.Trim();
-        item.Description = model.Description.Trim();
+        item.Description = string.IsNullOrWhiteSpace(model.Description) ? null : model.Description.Trim();
         item.Link = string.IsNullOrWhiteSpace(model.Link) ? null : model.Link.Trim();
     }
 }

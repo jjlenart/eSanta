@@ -3,16 +3,24 @@
   "WorkspaceRootPath": "C:\\Users\\lenar\\source\\repos\\eSantaProject\\eSanta\\eSanta\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{1FBA1BFC-64FC-91EB-1385-65B1656E50C6}|source\\eSanta\\eSanta.csproj|c:\\users\\lenar\\source\\repos\\esantaproject\\esanta\\esanta\\source\\esanta\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{1FBA1BFC-64FC-91EB-1385-65B1656E50C6}|source\\eSanta\\eSanta.csproj|solutionrelative:source\\esanta\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1FBA1BFC-64FC-91EB-1385-65B1656E50C6}|source\\eSanta\\eSanta.csproj|c:\\users\\lenar\\source\\repos\\esantaproject\\esanta\\esanta\\source\\esanta\\components\\shared\\snackbaroperationfeedback.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1FBA1BFC-64FC-91EB-1385-65B1656E50C6}|source\\eSanta\\eSanta.csproj|solutionrelative:source\\esanta\\components\\shared\\snackbaroperationfeedback.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1FBA1BFC-64FC-91EB-1385-65B1656E50C6}|source\\eSanta\\eSanta.csproj|c:\\users\\lenar\\source\\repos\\esantaproject\\esanta\\esanta\\source\\esanta\\components\\pages\\adminpanel.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{1FBA1BFC-64FC-91EB-1385-65B1656E50C6}|source\\eSanta\\eSanta.csproj|solutionrelative:source\\esanta\\components\\pages\\adminpanel.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{1FBA1BFC-64FC-91EB-1385-65B1656E50C6}|source\\eSanta\\eSanta.csproj|c:\\users\\lenar\\source\\repos\\esantaproject\\esanta\\esanta\\source\\esanta\\components\\pages\\attendance.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
       "RelativeMoniker": "D:0:0:{1FBA1BFC-64FC-91EB-1385-65B1656E50C6}|source\\eSanta\\eSanta.csproj|solutionrelative:source\\esanta\\components\\pages\\attendance.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{1FBA1BFC-64FC-91EB-1385-65B1656E50C6}|source\\eSanta\\eSanta.csproj|c:\\users\\lenar\\source\\repos\\esantaproject\\esanta\\esanta\\source\\esanta\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{1FBA1BFC-64FC-91EB-1385-65B1656E50C6}|source\\eSanta\\eSanta.csproj|solutionrelative:source\\esanta\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{1FBA1BFC-64FC-91EB-1385-65B1656E50C6}|source\\eSanta\\eSanta.csproj|c:\\users\\lenar\\source\\repos\\esantaproject\\esanta\\esanta\\source\\esanta\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
-      "RelativeMoniker": "D:0:0:{1FBA1BFC-64FC-91EB-1385-65B1656E50C6}|source\\eSanta\\eSanta.csproj|solutionrelative:source\\esanta\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
     }
   ],
   "DocumentGroupContainers": [
@@ -22,17 +30,45 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 0,
+          "SelectedChildIndex": 3,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
+              "Title": "SnackbarOperationFeedback.cs",
+              "DocumentMoniker": "C:\\Users\\lenar\\source\\repos\\eSantaProject\\eSanta\\eSanta\\source\\eSanta\\Components\\Shared\\SnackbarOperationFeedback.cs",
+              "RelativeDocumentMoniker": "source\\eSanta\\Components\\Shared\\SnackbarOperationFeedback.cs",
+              "ToolTip": "C:\\Users\\lenar\\source\\repos\\eSantaProject\\eSanta\\eSanta\\source\\eSanta\\Components\\Shared\\SnackbarOperationFeedback.cs",
+              "RelativeToolTip": "source\\eSanta\\Components\\Shared\\SnackbarOperationFeedback.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-11-22T10:25:10.887Z",
+              "EditorCaption": "",
+              "OwnerCaption": "%2"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "AdminPanel.razor",
+              "DocumentMoniker": "C:\\Users\\lenar\\source\\repos\\eSantaProject\\eSanta\\eSanta\\source\\eSanta\\Components\\Pages\\AdminPanel.razor",
+              "RelativeDocumentMoniker": "source\\eSanta\\Components\\Pages\\AdminPanel.razor",
+              "ToolTip": "C:\\Users\\lenar\\source\\repos\\eSantaProject\\eSanta\\eSanta\\source\\eSanta\\Components\\Pages\\AdminPanel.razor",
+              "RelativeToolTip": "source\\eSanta\\Components\\Pages\\AdminPanel.razor",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2026-11-22T10:25:02.724Z",
+              "EditorCaption": "",
+              "OwnerCaption": "%2"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
               "Title": "Attendance.razor",
               "DocumentMoniker": "C:\\Users\\lenar\\source\\repos\\eSantaProject\\eSanta\\eSanta\\source\\eSanta\\Components\\Pages\\Attendance.razor",
               "RelativeDocumentMoniker": "source\\eSanta\\Components\\Pages\\Attendance.razor",
               "ToolTip": "C:\\Users\\lenar\\source\\repos\\eSantaProject\\eSanta\\eSanta\\source\\eSanta\\Components\\Pages\\Attendance.razor",
               "RelativeToolTip": "source\\eSanta\\Components\\Pages\\Attendance.razor",
-              "ViewState": "AgIAACMAAAAAAAAAAAAAADsAAAABAAAAAAAAAA==",
+              "ViewState": "AgIAACUAAAAAAAAAAAAAAEYAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
               "WhenOpened": "2026-11-21T16:47:11.299Z",
               "EditorCaption": "",
@@ -40,13 +76,13 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 0,
               "Title": "appsettings.json",
               "DocumentMoniker": "C:\\Users\\lenar\\source\\repos\\eSantaProject\\eSanta\\eSanta\\source\\eSanta\\appsettings.json",
               "RelativeDocumentMoniker": "source\\eSanta\\appsettings.json",
               "ToolTip": "C:\\Users\\lenar\\source\\repos\\eSantaProject\\eSanta\\eSanta\\source\\eSanta\\appsettings.json",
               "RelativeToolTip": "source\\eSanta\\appsettings.json",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA0AAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
               "WhenOpened": "2026-11-21T15:27:19.821Z",
               "EditorCaption": "",
@@ -54,13 +90,13 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 4,
               "Title": "Program.cs",
               "DocumentMoniker": "C:\\Users\\lenar\\source\\repos\\eSantaProject\\eSanta\\eSanta\\source\\eSanta\\Program.cs",
               "RelativeDocumentMoniker": "source\\eSanta\\Program.cs",
               "ToolTip": "C:\\Users\\lenar\\source\\repos\\eSantaProject\\eSanta\\eSanta\\source\\eSanta\\Program.cs",
               "RelativeToolTip": "source\\eSanta\\Program.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAEAAAAAXAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAEcAAAAXAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-11-21T15:26:32.119Z",
               "EditorCaption": "",

@@ -16,7 +16,6 @@ public class WishlistItemConfiguration : IEntityTypeConfiguration<WishlistItem>
             .HasMaxLength(WishlistItem.NameMaxLength);
 
         builder.Property(item => item.Description)
-            .IsRequired()
             .HasMaxLength(WishlistItem.DescriptionMaxLength);
 
         builder.Property(item => item.Link)

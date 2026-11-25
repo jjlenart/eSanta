@@ -66,16 +66,27 @@ public class WishlistServiceTests
     }
 
     [Theory]
-    [InlineData("", "Opis")]
-    [InlineData("Nazwa", "")]
-    [InlineData("   ", "Opis")]
-    public async Task AddAsync_WithMissingRequiredField_ReturnsFailure(string name, string description)
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task AddAsync_WithMissingName_ReturnsFailure(string name)
     {
-        var result = await _service.AddAsync(OwnerId, new WishlistItemFormModel { Name = name, Description = description });
+        var result = await _service.AddAsync(OwnerId, new WishlistItemFormModel { Name = name, Description = "Opis" });
 
         result.Succeeded.ShouldBeFalse();
         result.Error.ShouldNotBeNullOrWhiteSpace();
         (await GetAllEntitiesAsync()).ShouldBeEmpty();
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task AddAsync_WithoutDescription_SavesNullDescription(string? description)
+    {
+        var result = await _service.AddAsync(OwnerId, new WishlistItemFormModel { Name = "Książka", Description = description });
+
+        result.Succeeded.ShouldBeTrue();
+        (await GetAllEntitiesAsync()).ShouldHaveSingleItem().Description.ShouldBeNull();
     }
 
     [Theory]

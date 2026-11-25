@@ -20,12 +20,15 @@
           Wrap="Wrap.Wrap"
           Class="mb-4">
     <MudText Typo="Typo.h4" HtmlTag="h1">Lista obecności</MudText>
-    <MudButton Variant="Variant.Filled"
-               Color="Color.Primary"
-               StartIcon="@Icons.Material.Filled.PersonAdd"
-               OnClick="OpenAddDialogAsync">
-        Dodaj osobę
-    </MudButton>
+    @if (_result?.HasFamily == true)
+    {
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.PersonAdd"
+                   OnClick="OpenAddDialogAsync">
+            Dodaj osobę
+        </MudButton>
+    }
 </MudStack>
 
 @if (_loadError is not null)
@@ -33,7 +36,16 @@
     <MudAlert Severity="Severity.Error" Class="mb-4">@_loadError</MudAlert>
 }
 
-@if (_myStatus is not null)
+@if (_result is { HasFamily: false })
+{
+    <MudAlert Severity="Severity.Info">Twoje konto nie jest przypisane do żadnej rodziny, więc nie widzisz listy obecności.</MudAlert>
+}
+else if (_result is not null)
+{
+    <MudText Typo="Typo.subtitle1" Class="mb-4">Rodzina: <strong>@_result.FamilyName</strong></MudText>
+}
+
+@if (_myStatus is not null && _result?.HasFamily == true)
 {
     <MudPaper Elevation="1" Class="pa-4 mb-4" Style="border-left: 4px solid var(--mud-palette-secondary)">
         <MudText Typo="Typo.h6" HtmlTag="h2" Class="mb-1">Twoja obecność</MudText>
@@ -55,13 +67,13 @@
     </MudPaper>
 }
 
-@if (_attendees is null && _loadError is null)
+@if (_result is null && _loadError is null)
 {
     <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
 }
-else if (_attendees is not null)
+else if (_result is { HasFamily: true })
 {
-    <MudTable Items="_attendees"
+    <MudTable Items="_result.Attendees"
               Hover="true"
               Breakpoint="Breakpoint.Sm"
               Elevation="1">
@@ -128,7 +140,7 @@ else if (_attendees is not null)
 
 @code {
     private string? _currentUserId;
-    private IReadOnlyList<AttendeeDto>? _attendees;
+    private AttendanceListResult? _result;
     private MyAttendanceDto? _myStatus;
     private bool _isSavingMyStatus;
     private string? _loadError;
@@ -149,7 +161,7 @@ else if (_attendees is not null)
     {
         try
         {
-            _attendees = await AttendeeService.GetAllAsync(_currentUserId!);
+            _result = await AttendeeService.GetAllAsync(_currentUserId!);
             _myStatus = await AttendeeService.GetMyStatusAsync(_currentUserId!);
             _loadError = null;
         }
@@ -175,10 +187,10 @@ else if (_attendees is not null)
     }
 
     private Task OpenAddDialogAsync() =>
-        ShowFormDialogAsync("Dodaj osobę", new AttendeeFormModel(), model => AttendeeService.AddAsync(model), "Dodano osobę do listy.");
+        ShowFormDialogAsync("Dodaj osobę", new AttendeeFormModel(), model => AttendeeService.AddAsync(_currentUserId!, model), "Dodano osobę do listy.");
 
     private Task OpenEditDialogAsync(AttendeeDto attendee) =>
-        ShowFormDialogAsync("Edytuj osobę", AttendeeFormModel.FromDto(attendee), model => AttendeeService.UpdateAsync(attendee.Id, model), "Zapisano zmiany.");
+        ShowFormDialogAsync("Edytuj osobę", AttendeeFormModel.FromDto(attendee), model => AttendeeService.UpdateAsync(_currentUserId!, attendee.Id, model), "Zapisano zmiany.");
 
     private async Task ShowFormDialogAsync(string title, AttendeeFormModel model, Func<AttendeeFormModel, Task<ServiceResult>> onSave, string successMessage)
     {
@@ -211,13 +223,13 @@ else if (_attendees is not null)
     }
 
     private Task SaveInlineAsync(int id, AttendeeFormModel model) =>
-        ExecuteAsync(() => AttendeeService.UpdateAsync(id, model));
+        ExecuteAsync(() => AttendeeService.UpdateAsync(_currentUserId!, id, model));
 
     private async Task DeleteAsync(AttendeeDto attendee)
     {
         if (await FormDialogService.ConfirmDeleteAsync("Usuń osobę", $"Czy na pewno chcesz usunąć „{attendee.FullName}” z listy?"))
         {
-            await ExecuteAsync(() => AttendeeService.DeleteAsync(attendee.Id), "Usunięto osobę z listy.");
+            await ExecuteAsync(() => AttendeeService.DeleteAsync(_currentUserId!, attendee.Id), "Usunięto osobę z listy.");
         }
     }
 

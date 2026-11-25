@@ -19,28 +19,36 @@
           Wrap="Wrap.Wrap"
           Class="mb-2">
     <MudText Typo="Typo.h4" HtmlTag="h1">Moja lista zakupowa</MudText>
-    <MudButton Variant="Variant.Filled"
-               Color="Color.Primary"
-               StartIcon="@Icons.Material.Filled.PersonAdd"
-               OnClick="OpenAddCustomDialogAsync"
-               Disabled="_ownerId is null">
-        Dodaj osobę spoza listy
-    </MudButton>
+    @if (_result?.HasFamily == true)
+    {
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.PersonAdd"
+                   OnClick="OpenAddCustomDialogAsync">
+            Dodaj osobę spoza listy
+        </MudButton>
+    }
 </MudStack>
-<MudText Typo="Typo.body2" Class="mb-4">Ta lista jest widoczna tylko dla Ciebie. Prezenty zarezerwowane na listach innych osób pojawiają się tu automatycznie.</MudText>
 
 @if (_loadError is not null)
 {
     <MudAlert Severity="Severity.Error" Class="mb-4">@_loadError</MudAlert>
 }
 
-@if (_rows is null && _loadError is null)
+@if (_result is null && _loadError is null)
 {
     <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
 }
-else if (_rows is not null)
+else if (_result is { HasFamily: false })
 {
-    <MudTable Items="_rows"
+    <MudAlert Severity="Severity.Info">Twoje konto nie jest przypisane do żadnej rodziny, więc nie możesz korzystać z listy zakupowej.</MudAlert>
+}
+else if (_result is not null)
+{
+    <MudText Typo="Typo.subtitle1" Class="mb-1">Rodzina: <strong>@_result.FamilyName</strong></MudText>
+    <MudText Typo="Typo.body2" Class="mb-4">Ta lista jest widoczna tylko dla Ciebie. Prezenty zarezerwowane na listach innych osób pojawiają się tu automatycznie.</MudText>
+
+    <MudTable Items="_result.Rows"
               Hover="true"
               Breakpoint="Breakpoint.Sm"
               Elevation="1">
@@ -129,7 +137,7 @@ else if (_rows is not null)
 
 @code {
     private string? _ownerId;
-    private IReadOnlyList<ShoppingListRowDto>? _rows;
+    private ShoppingListResult? _result;
     private string? _loadError;
 
     protected override async Task OnInitializedAsync()
@@ -148,7 +156,7 @@ else if (_rows is not null)
     {
         try
         {
-            _rows = await ShoppingListService.GetAsync(_ownerId!);
+            _result = await ShoppingListService.GetAsync(_ownerId!);
             _loadError = null;
         }
         catch (Exception)

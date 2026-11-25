@@ -4,7 +4,7 @@ namespace eSanta.Features.ShoppingList;
 
 public interface IShoppingListService
 {
-    Task<IReadOnlyList<ShoppingListRowDto>> GetAsync(string ownerId, CancellationToken cancellationToken = default);
+    Task<ShoppingListResult> GetAsync(string ownerId, CancellationToken cancellationToken = default);
 
     Task<ServiceResult> SaveAsync(string ownerId, ShoppingRecipient recipient, ShoppingEntryFormModel model, CancellationToken cancellationToken = default);
 
