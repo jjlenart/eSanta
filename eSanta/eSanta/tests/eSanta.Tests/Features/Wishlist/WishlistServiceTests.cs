@@ -139,6 +139,19 @@ public class WishlistServiceTests
     }
 
     [Fact]
+    public async Task DeleteAsync_ReservedItem_ReturnsFailureAndKeepsIt()
+    {
+        var item = await SeedAsync(new WishlistItem { OwnerId = OwnerId, Name = "Książka", Description = "Kryminał", ReservedById = OtherUserId });
+
+        var result = await _service.DeleteAsync(OwnerId, item.Id);
+
+        result.Succeeded.ShouldBeFalse();
+        result.Error.ShouldBe("Ktoś się tym już zainteresował");
+        result.IsNotice.ShouldBeTrue();
+        (await GetAllEntitiesAsync()).ShouldHaveSingleItem();
+    }
+
+    [Fact]
     public async Task DeleteAsync_SomeoneElsesItem_ReturnsFailureAndKeepsIt()
     {
         var item = await SeedAsync(new WishlistItem { OwnerId = OtherUserId, Name = "Rower", Description = "Górski" });

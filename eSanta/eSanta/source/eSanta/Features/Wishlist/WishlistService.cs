@@ -10,6 +10,7 @@ public sealed class WishlistService(
 {
     private const string NotFoundError = "Nie znaleziono prezentu. Mógł zostać już usunięty.";
     private const string ConcurrencyError = "Prezent został w międzyczasie zmieniony. Odśwież stronę i spróbuj ponownie.";
+    private const string ReservedItemDeleteError = "Ktoś się tym już zainteresował";
 
     public async Task<IReadOnlyList<WishlistItemDto>> GetItemsAsync(string ownerId, CancellationToken cancellationToken = default)
     {
@@ -70,6 +71,11 @@ public sealed class WishlistService(
         if (item is null)
         {
             return ServiceResult.Failure(NotFoundError);
+        }
+
+        if (item.ReservedById is not null)
+        {
+            return ServiceResult.Notice(ReservedItemDeleteError);
         }
 
         dbContext.WishlistItems.Remove(item);

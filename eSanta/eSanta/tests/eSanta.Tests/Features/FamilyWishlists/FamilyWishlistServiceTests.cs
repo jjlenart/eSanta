@@ -84,6 +84,7 @@ public class FamilyWishlistServiceTests
     [Fact]
     public async Task ReserveAsync_AvailableItem_ReservesForCurrentUser()
     {
+        await SeedOwnItemsAsync(Anna, FamilyWishlistService.MinimumOwnItemsToReserve);
         await SeedItemsAsync(new WishlistItem { Id = 1, OwnerId = Jan, Name = "Książka", Description = "Kryminał" });
 
         var result = await _service.ReserveAsync(Anna, 1);
@@ -95,6 +96,7 @@ public class FamilyWishlistServiceTests
     [Fact]
     public async Task ReserveAsync_ItemReservedBySomeoneElse_ReturnsFailureAndKeepsReservation()
     {
+        await SeedOwnItemsAsync(Anna, FamilyWishlistService.MinimumOwnItemsToReserve);
         await SeedItemsAsync(new WishlistItem { Id = 1, OwnerId = Jan, Name = "Książka", Description = "Kryminał", ReservedById = Zofia });
 
         var result = await _service.ReserveAsync(Anna, 1);
@@ -102,6 +104,22 @@ public class FamilyWishlistServiceTests
         result.Succeeded.ShouldBeFalse();
         result.Error.ShouldBe("Ten prezent został już zarezerwowany przez kogoś innego.");
         (await GetItemAsync(1)).ReservedById.ShouldBe(Zofia);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public async Task ReserveAsync_WhenOwnWishlistHasTooFewItems_ReturnsFailure(int ownItemsCount)
+    {
+        await SeedOwnItemsAsync(Anna, ownItemsCount);
+        await SeedItemsAsync(new WishlistItem { Id = 1, OwnerId = Jan, Name = "Książka", Description = "Kryminał" });
+
+        var result = await _service.ReserveAsync(Anna, 1);
+
+        result.Succeeded.ShouldBeFalse();
+        result.Error.ShouldBe("A czy Ty już uzupełniłeś swój list?");
+        result.IsNotice.ShouldBeTrue();
+        (await GetItemAsync(1)).ReservedById.ShouldBeNull();
     }
 
     [Fact]
@@ -172,6 +190,11 @@ public class FamilyWishlistServiceTests
         dbContext.WishlistItems.AddRange(items);
         await dbContext.SaveChangesAsync();
     }
+
+    private Task SeedOwnItemsAsync(string ownerId, int count) =>
+        SeedItemsAsync(Enumerable.Range(1, count)
+            .Select(index => new WishlistItem { Id = 100 + index, OwnerId = ownerId, Name = $"Prezent {index}" })
+            .ToArray());
 
     private async Task<WishlistItem> GetItemAsync(int id)
     {

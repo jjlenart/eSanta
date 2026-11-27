@@ -8,6 +8,9 @@ public sealed class FamilyWishlistService(IDbContextFactory<ApplicationDbContext
 {
     private const string NotFoundError = "Nie znaleziono prezentu. Mógł zostać usunięty przez właściciela.";
     private const string AlreadyReservedError = "Ten prezent został już zarezerwowany przez kogoś innego.";
+    private const string OwnWishlistTooShortError = "A czy Ty już uzupełniłeś swój list?";
+
+    public const int MinimumOwnItemsToReserve = 3;
 
     public async Task<FamilyMembersResult> GetFamilyMembersAsync(string currentUserId, CancellationToken cancellationToken = default)
     {
@@ -85,6 +88,12 @@ public sealed class FamilyWishlistService(IDbContextFactory<ApplicationDbContext
         if (item.ReservedById == currentUserId)
         {
             return ServiceResult.Success();
+        }
+
+        var ownItemsCount = await dbContext.WishlistItems.CountAsync(ownItem => ownItem.OwnerId == currentUserId, cancellationToken);
+        if (ownItemsCount < MinimumOwnItemsToReserve)
+        {
+            return ServiceResult.Notice(OwnWishlistTooShortError);
         }
 
         if (item.ReservedById is not null)
